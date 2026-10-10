@@ -8,7 +8,6 @@ use axum::{
 use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::{
-    io::Cursor,
     net::SocketAddr,
     sync::{
         Arc, Mutex,
@@ -125,16 +124,12 @@ pub async fn fixture() -> Fixture {
     }
 }
 fn acceptor() -> TlsAcceptor {
-    let certs = rustls_pemfile::certs(&mut Cursor::new(include_bytes!(
-        "../fixtures/localhost-test.crt"
-    )))
-    .collect::<std::result::Result<Vec<_>, _>>()
-    .unwrap();
-    let key = rustls_pemfile::private_key(&mut Cursor::new(include_bytes!(
-        "../fixtures/localhost-test.key"
-    )))
-    .unwrap()
-    .unwrap();
+    use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
+    let certs = CertificateDer::pem_slice_iter(include_bytes!("../fixtures/localhost-test.crt"))
+        .collect::<std::result::Result<Vec<_>, _>>()
+        .unwrap();
+    let key =
+        PrivateKeyDer::from_pem_slice(include_bytes!("../fixtures/localhost-test.key")).unwrap();
     let config = rustls::ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs, key)

@@ -47,7 +47,7 @@ jobs:
       - name: Check Rust lints
         run: ./scripts/verify.ps1 -CargoArgs @('clippy', '--locked', '--all-targets', '--', '-D', 'warnings')
       - name: Run every bounded test
-        run: ./scripts/verify.ps1 -CargoArgs @('nextest', 'run', '--locked', '--all-targets', '--profile', 'ci')
+        run: ./scripts/verify.ps1 -CargoArgs @('nextest', 'run', '--locked', '--all-targets', '--profile', 'ci', '--no-fail-fast')
       - name: Build and smoke native launcher
         run: |
           ./build.ps1

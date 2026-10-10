@@ -129,14 +129,10 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
             serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"upwork-native-sign-in","version":"2.0.0"}}}),
         )?;
         let verification = tokio::time::timeout(Duration::from_secs(30), async {
-            transport
-                .send(message)
-                .await
-                .map_err(|_| Error::Safe("Session saved but MCP initialization failed."))?;
-            let response = transport
-                .receive()
-                .await
-                .ok_or(Error::Safe("MCP initialization did not return."))?;
+            let send = send_owned(&mut transport, message);
+            let (sent, response) = tokio::join!(send, transport.receive());
+            sent.map_err(|_| Error::Safe("Session saved but MCP initialization failed."))?;
+            let response = response.ok_or(Error::Safe("MCP initialization did not return."))?;
             let v = serde_json::to_value(response)?;
             if v.get("result").and_then(|v| v.get("serverInfo")).is_none() {
                 return Err(Error::Safe(
