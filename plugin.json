@@ -14,5 +14,24 @@
     "freelance",
     "job-selection",
     "mcp"
-  ]
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Upwork Project Selection",
+        "shortDescription": "Choose worthwhile Upwork jobs before applying",
+        "longDescription": "Assess client buying intent, proven freelancer fit and contract value with evidence-based, read-only triage.",
+        "developerName": "KiaroSama",
+        "category": "Productivity",
+        "capabilities": [
+          "Read"
+        ],
+        "websiteURL": "https://github.com/KiaroSama/Upwork-Agent-Plugin",
+        "defaultPrompt": [
+          "Assess this Upwork job before I spend Connects."
+        ],
+        "brandColor": "#236A70"
+      }
+    }
+  }
 }

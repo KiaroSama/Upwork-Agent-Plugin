@@ -1,0 +1,15 @@
+{
+  "name": "upwork-agent-plugin-marketplace",
+  "description": "Read-only Upwork job-selection skills with separate native connector setup.",
+  "owner": {
+    "name": "KiaroSama"
+  },
+  "plugins": [
+    {
+      "name": "upwork-agent-connector",
+      "description": "Evidence-based, read-only Upwork project selection.",
+      "source": "./",
+      "version": "2.0.0"
+    }
+  ]
+}

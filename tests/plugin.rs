@@ -12,6 +12,26 @@ fn shared_skill_and_client_manifests_are_complete_without_direct_mcp() {
         "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
     );
     assert!(portable.get("skills").is_none());
+    let marketplace: Value =
+        serde_json::from_str(include_str!("../.claude-plugin/marketplace.json")).unwrap();
+    assert_eq!(marketplace["name"], "upwork-agent-plugin-marketplace");
+    assert_eq!(marketplace["plugins"][0]["source"], "./");
+    assert_eq!(marketplace["plugins"][0]["name"], portable["name"]);
+    assert_eq!(marketplace["plugins"][0]["version"], portable["version"]);
+    let codex: Value = serde_json::from_str(include_str!("../.codex-plugin/plugin.json")).unwrap();
+    let interface = &portable["extensions"]["com.openai"]["interface"];
+    assert_eq!(interface, &codex["interface"]);
+    assert_eq!(interface["capabilities"], serde_json::json!(["Read"]));
+    for key in [
+        "displayName",
+        "shortDescription",
+        "developerName",
+        "category",
+        "websiteURL",
+    ] {
+        assert!(!interface[key].as_str().unwrap().is_empty());
+    }
+    assert!(!interface["defaultPrompt"].as_array().unwrap().is_empty());
     for text in [
         include_str!("../.claude-plugin/plugin.json"),
         include_str!("../.codex-plugin/plugin.json"),

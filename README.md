@@ -24,44 +24,77 @@ Native Rust connector for **Upwork's hosted MCP**, not an offline or self-hosted
 
 ## Quick start
 
-Clone this repository and open its folder in PowerShell 7. Build with an existing Rust toolchain:
+**Download a ready-to-run bundle from [Releases](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest). No Rust, Cargo, Node.js or compiler installation is needed.** Download the archive matching your OS/CPU, not GitHub's source-code ZIP.
+
+| Platform | Ready-to-run download |
+| --- | --- |
+| Windows x64 | [Windows ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [Linux tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-linux-x64.tar.gz) |
+| macOS Apple Silicon | [macOS ARM64 tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-macos-arm64.tar.gz) |
+| macOS Intel | [macOS x64 tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-macos-x64.tar.gz) |
+
+Each archive has a matching `.sha256` checksum asset and `release.json` identifying its version, platform and source commit. The binaries are not Authenticode-signed or Apple-notarized; review the source/checksum and your OS warning rather than disabling system protections. Linux ARM, Windows ARM, Alpine/musl and other CPU targets are not covered by these native bundles.
+
+### Windows installation
+
+1. Download the Windows ZIP and its `.sha256` asset. Verify the ZIP's SHA256 against that file:
 
 ```powershell
-pwsh -NoProfile -File ./build.ps1
+Get-FileHash ./upwork-agent-plugin-2.0.0-windows-x64.zip -Algorithm SHA256
 ```
 
-The build restores dependencies from `Cargo.lock`, writes the native executable under `bin/`, and protects local state directories on Windows. It never installs global software automatically.
+2. Extract the **whole archive** into a writable folder; keep `bin/`, `scripts/`, `skills/` and the launchers together. Open that folder in PowerShell. Protect private state before saving profiles or signing in:
 
 ```powershell
-pwsh -NoProfile -File ./run.ps1
+./scripts/protect-state.ps1 -ProjectRoot .
 ```
 
-1. Choose **2 — Import proxy list from file** and enter your UTF-8 file path, with or without quotes. Enter defaults to your own `Proxy list.txt` in this folder; no real proxy list is distributed.
-2. Choose **1 — Select proxy**, then its displayed number. Initial mode is **blocked**; import alone does not select a route or connect.
-3. Choose **6 — Sign in** yourself. Copy the complete authorization URL into your browser on the same computer. Keep the terminal open for the localhost callback; wait for the terminal's saved-session and MCP-initialization confirmation.
-4. Choose **7 — Register** for Claude Code, reopen this project and approve/reconnect `upwork-local`.
+3. Run the native menu directly; PowerShell 7 is optional for this command:
 
-`0` returns from submenus, `exit` quits at every prompt, and Enter in the main menu opens selection. **4 — Direct** deliberately bypasses proxies; **5 — Block** disables connector networking.
+```powershell
+./bin/upwork-connector.exe menu
+```
 
-### macOS and Linux
+The optional `run.ps1` launcher uses PowerShell 7. Extract into a new folder for upgrades, or replace only shipped program files; preserve your existing profile/credential/log directories. Never extract another person's saved state.
 
-With an existing Rust 1.99+ toolchain and native linker, no PowerShell is required:
+### Linux and macOS installation
+
+1. Download the matching tar.gz and `.sha256` assets. On Linux verify with `sha256sum`; macOS uses `shasum -a 256`:
 
 ```bash
-sh ./build.sh
+sha256sum -c upwork-agent-plugin-2.0.0-linux-x64.tar.gz.sha256
 ```
 
 ```bash
-sh ./run.sh
+shasum -a 256 -c upwork-agent-plugin-2.0.0-macos-arm64.tar.gz.sha256
 ```
 
-The shell launcher resolves its own folder, supports paths containing spaces and uses private file permissions. Generate Desktop configuration where a supported Desktop client is available:
+2. Create a private, writable installation folder and extract the complete archive there:
 
 ```bash
-sh ./run.sh desktop-config
+mkdir -m 700 upwork-agent-plugin
 ```
 
-The same stdio executable works with MCP hosts on Linux; availability of a particular host application is separate from connector support.
+```bash
+tar -xzf upwork-agent-plugin-2.0.0-linux-x64.tar.gz -C upwork-agent-plugin
+```
+
+Substitute your macOS archive name when applicable. The tar preserves executable permissions. Run from the extracted folder, or pass its path to the launcher:
+
+```bash
+sh ./upwork-agent-plugin/run.sh
+```
+
+The same stdio executable works with MCP hosts on Linux; a particular host application's availability is separate from connector support.
+
+### Choose a route and sign in
+
+1. **Local proxy:** choose **8 — Local proxy settings** to match your existing local proxy (default `socks5h://127.0.0.1:1595`), then **9 — Select local proxy**. This does not install a proxy service.
+2. **Saved remote proxy:** choose **2 — Import proxy list from file**, enter its UTF-8 path, then **1 — Select proxy**. Initial mode is blocked; importing does not enable networking.
+3. Choose **6 — Sign in** yourself. Copy the complete authorization URL into your browser on the same computer. Keep the terminal open for the localhost callback and wait for saved-session/MCP-initialization confirmation.
+4. For Claude Code, choose **7 — Register**, reopen the extracted project folder in Claude and approve/reconnect `upwork-local`. For Desktop, follow the configuration section below.
+
+`0` returns from submenus, `exit` quits, and Enter in the main menu opens selection. **4 — Direct** deliberately bypasses proxies; **5 — Block** disables connector networking. Sign-in and connector registration are separate from installing the advisory skills plugin.
 
 ## Claude Desktop
 
@@ -75,11 +108,33 @@ Merge the printed `mcpServers.upwork-local` object into `claude_desktop_config.j
 
 Registration only edits Claude Code's project configuration. Its direct-Upwork denial does **not** apply to separate Desktop or claude.ai connectors. Disable duplicate direct Upwork connectors in that host yourself if you require routed-only access. Optional official Upwork skills can remain installed; they are not bundled here.
 
-## Skills plugin
+## Skills plugin installation
 
-The bundled [upwork-project-selection](skills/upwork-project-selection/SKILL.md) skill evaluates buying intent, freelancer fit and contract value before investing time or Connects. It is read-only and works with pasted job evidence or authorized MCP reads.
+The bundled [upwork-project-selection](skills/upwork-project-selection/SKILL.md) skill evaluates buying intent, freelancer fit and contract value before investing time or Connects. It is advisory/read-only; installation is independent from the native MCP connection.
 
-Claude, Codex, Cursor and portable Agent Plugins manifests share one skill tree. Antigravity can discover the same standard skill. See the [skill catalog and client loading guide](docs/skills.md); installation does not replace official Upwork skills or enable a duplicate direct MCP route.
+**Claude Code:** add the marketplace and install:
+
+```bash
+claude plugin marketplace add KiaroSama/Upwork-Agent-Plugin
+```
+
+```bash
+claude plugin install upwork-agent-connector@upwork-agent-plugin-marketplace
+```
+
+Invoke `/upwork-agent-connector:upwork-project-selection` in a new session.
+
+**Codex:** register the catalog:
+
+```bash
+codex plugin marketplace add KiaroSama/Upwork-Agent-Plugin --ref main
+```
+
+Restart the ChatGPT desktop app, open Plugins Directory, choose `upwork-agent-plugin-marketplace` and install **Upwork Project Selection**. Invoke `$upwork-project-selection`. Standalone skill copying also works.
+
+**Cursor / Antigravity:** download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.0.0.zip), extract it, and copy `skills/upwork-project-selection/` into your workspace's `.agents/skills/` without overwriting an existing skill. Reopen the workspace and invoke `/upwork-project-selection`.
+
+See [complete client instructions](docs/skills.md) for collision-safe Windows/Unix commands, local Claude loading and verification limits. One canonical skill is shared by portable/Claude/Codex/Cursor manifests. Installation neither replaces official Upwork skills nor enables a duplicate direct MCP route.
 
 ## Agent and CLI control
 
@@ -126,7 +181,7 @@ Imports append validated profiles and skip identical normalized URLs, including 
 
 ## Requirements
 
-**Build:** Rust 1.99 or newer, Cargo, platform linker/build tools (MSVC on Windows), and PowerShell 7 for the supplied scripts. **Run:** the built native executable, access to the selected proxy and a user-authorized Upwork account; no Rust/Node runtime is needed to execute the binary. Core tests run natively on Windows, macOS and Linux. The Windows ACL helper is Windows-only.
+**Run:** matching release archive, a writable private installation folder, access to the explicitly selected route and a user-authorized Upwork account. No Rust/Cargo/Node installation is required. Windows x64, Linux x64 (glibc 2.35+) and macOS ARM64/x64 bundles are built and exercised natively in CI. PowerShell 7 is needed only for the optional Windows launcher/developer scripts; Windows PowerShell can run the ACL setup. Browser OAuth remains user-owned.
 
 ## Implementation
 
@@ -150,13 +205,17 @@ pwsh -NoProfile -File ./scripts/protect-state.ps1 -ProjectRoot .
 
 A browser callback page alone is not proof of completion. Wait for the terminal confirmation. If your browser proxy blocks localhost, exempt localhost/127.0.0.1 in **browser settings only**; connector-owned requests still use their selected route.
 
+## Developer builds (optional)
+
+Normal users download Releases; only contributors need Rust 1.99+, Cargo and a native linker. Source builds remain available with `build.ps1` on Windows or `build.sh` on Unix. Build output/cache can consume several GB under `target/`; it is not part of a release bundle. CI builds the downloadable binaries, so user installation never needs that cache.
+
 ## Checks
 
 ```powershell
 pwsh -NoProfile -File ./scripts/verify.ps1
 ```
 
-The bounded owner limits Cargo commands to 15 minutes wall / 3 minutes idle and terminates the owned process tree on expiry. Tests have explicit network/CLI deadlines. CI uses Nextest with two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout, without retries. The final CI matrix covers Windows, macOS and Linux, Clippy, formatting, strict UTF-8/source inventory, all test suites, native build/launcher smoke, RustSec dependency audit and CodeQL. Dependabot checks Cargo and action updates; pull requests receive dependency review.
+The bounded owner limits Cargo commands to 15 minutes wall / 3 minutes idle and terminates the owned process tree on expiry. Tests have explicit network/CLI deadlines. CI uses Nextest with two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout, without retries. The final CI matrix covers Windows x64, Linux x64, macOS ARM64 and macOS Intel, Clippy, formatting, strict UTF-8/source inventory, all test suites, native build/launcher smoke, RustSec dependency audit and CodeQL. Each CI build packages an allowlisted archive, verifies the extracted native executable in a fresh space-containing folder, and uploads the archive plus SHA256 checksum. Only green exact-commit artifacts are published to Releases; private profiles, credentials, logs, caches and test keys are excluded. CI artifacts expire after 14 days; Releases provide durable public downloads. Dependabot checks Cargo and action updates; pull requests receive dependency review.
 
 Controlled localhost fixtures test HTTP/HTTPS/SOCKS authentication and remote DNS, proxy refusal/no fallback, OAuth code exchange/refresh and CSRF/issuer rejection, MCP relay/route changes, malformed config/import, atomic writes, menu, registration and log safety. TLS keys are intentionally public localhost-only fixtures. These tests do not prove live Upwork access, browser interaction or host hot reload; no marketplace writes are executed.
 

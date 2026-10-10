@@ -1,0 +1,18 @@
+{
+  "common": [
+    "README.md",
+    "LICENSE",
+    "docs/skills.md",
+    "docs/migration.md",
+    "plugin.json",
+    ".claude-plugin/plugin.json",
+    ".claude-plugin/marketplace.json",
+    ".codex-plugin/plugin.json",
+    ".cursor-plugin/plugin.json",
+    "skills/upwork-project-selection/SKILL.md",
+    "skills/upwork-project-selection/agents/openai.yaml",
+    "skills/upwork-project-selection/evals/evals.json"
+  ],
+  "windows": ["run.ps1", "scripts/protect-state.ps1", "config/connections.example.json"],
+  "unix": ["run.sh", "config/connections.example.json"]
+}

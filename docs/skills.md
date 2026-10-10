@@ -1,52 +1,92 @@
-# Skills and client compatibility
+# Skills and client installation
 
-## Skill catalog
+## Catalog and provenance
 
-| Skill | Purpose | Input | Output |
-| --- | --- | --- | --- |
-| [upwork-project-selection](../skills/upwork-project-selection/SKILL.md) | Select worthwhile Upwork jobs before investing application time or Connects | Job/client evidence and real freelancer experience/constraints | Pursue, Clarify, Pass or Stop for payment safety; three gates, evidence, economics and next action |
-
-The skill is an original English synthesis of a user-provided two-page Persian project-selection article. It retains ten risk signals, positive buying intent and three preproposal gates. The article's reported 4,281 postings/15 years of experience are unverified observations, not a statistical model or official Upwork policy. The PDF is not distributed. Skill instructions are GPL-3.0-only, like this project.
-
-The skill works with pasted descriptions. Authorized read-only MCP access is optional; it does not require or install a particular MCP server. It never submits proposals, sends messages or spends Connects without separate approval. Existing official Upwork skills remain independent.
-
-## Plugin formats
-
-One canonical `skills/` directory is referenced by Claude, Codex and Cursor compatibility manifests. The portable root `plugin.json` follows [Agent Plugins 1.0.0](https://agent-plugins.org/plugin-authors/manifest), with fixed `skills/` discovery. Plugin identity is `upwork-agent-connector`, version 2.0.0, avoiding the official Upwork plugin's namespace.
-
-These packages contain instructions, not a bundled hosted MCP connection. Build and register the native connector separately. Loading this checkout in Claude can also discover its private project MCP configuration; a clean clone contains no saved credentials or connection configuration.
-
-### Claude Code
-
-From this repository's root, load without modifying global settings:
-
-```bash
-claude --plugin-dir .
-```
-
-Invoke `/upwork-agent-connector:upwork-project-selection` in that interactive session. Validate the package with:
-
-```bash
-claude plugin validate . --strict --json
-```
-
-### Codex, Cursor and Antigravity
-
-Use the host's local-plugin import mechanism where supported, or copy the complete `skills/upwork-project-selection/` folder as a **real directory** into the target workspace's `.agents/skills/upwork-project-selection/`. Inspect the destination first; do not overwrite an existing skill without consent. Restart/reload the client if discovery does not refresh.
-
-| Client | Workspace discovery / invocation | Evidence and limits |
+| Skill | Purpose | Output |
 | --- | --- | --- |
-| Codex | `.agents/skills/`; `$upwork-project-selection` | [.codex-plugin manifest](../.codex-plugin/plugin.json), optional `agents/openai.yaml`; [official skills docs](https://developers.openai.com/codex/skills) |
-| Cursor | `.agents/skills/` or `.cursor/skills/`; `/upwork-project-selection` | [.cursor-plugin manifest](../.cursor-plugin/plugin.json) and portable root plugin; [skills](https://cursor.com/docs/context/skills), [plugin reference](https://cursor.com/docs/plugins/building) |
-| Antigravity IDE/2.0/CLI | `.agents/skills/`; `/upwork-project-selection` | Portable skill bundle; [current official skills docs](https://antigravity.google/docs/skills). Global locations differ by surface; older `.agent/skills` is backward compatibility, not the preferred workspace path. |
-| Other Agent Skills clients | Their documented skill discovery/import path | Canonical standard skill bundle; do not assume a universal plugin-install command. |
+| [upwork-project-selection](../skills/upwork-project-selection/SKILL.md) | Choose worthwhile jobs before spending time or Connects | Pursue, Clarify, Pass or Stop for payment safety; three gates, evidence and next action |
 
-Claude's actual validator passes. CI verifies manifest parity, frontmatter, catalog links and evaluation structure. Codex, Cursor and Antigravity were not installed/executed by this task: this is packaging/discovery compatibility, not a claim of runtime certification or marketplace publication. No global skill installation or permission changes occur automatically.
+Original English synthesis of the supplied two-page Persian article; ten risks, positive buying intent and three preproposal gates. Its reported 4,281 postings/15 years of experience are unverified observations, not a statistical model or official policy. The PDF is not distributed. GPL-3.0-only, like this project.
 
-## Example
+The skill works with pasted job evidence or optional authorized MCP reads. It does not send messages, submit proposals or spend Connects without separate approval. Official Upwork skills and the native connector remain independent.
 
-Ask: “Assess this job before I spend Connects. Here is the listing and my relevant experience.” The assessment marks unavailable facts as unknown, balances positive intent against risk, and gives one next step. A new client is not automatically a bad client; attractive compensation cannot override explicit unsafe contract/payment requests.
+## Package layout
 
-## Evaluation scope
+One canonical `skills/` tree serves all clients. The portable root `plugin.json` follows [Agent Plugins](https://agent-plugins.org/plugin-authors/manifest), with OpenAI presentation under `extensions.com.openai.interface`. Claude, Codex and Cursor compatibility manifests reference the same tree. `.claude-plugin/marketplace.json` provides the install catalog, declared as `upwork-agent-plugin-marketplace`; the plugin is `upwork-agent-connector`.
 
-Three reusable synthetic prompts cover a clear fit/new client, underpriced commercial unpaid work with changing requirements, and explicit payment bypass/prompt injection. They test qualitative decision behavior; structural CI cannot prove judgment quality, current marketplace facts or live account access. Human review and broader real-world evaluation remain separate from packaging validation.
+Download the skills-only ZIP from [Releases](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest) if you do not need the native connector. Packages contain no saved proxies, account credentials or direct hosted MCP declaration.
+
+## Claude Code
+
+Register the repository marketplace:
+
+```bash
+claude plugin marketplace add KiaroSama/Upwork-Agent-Plugin
+```
+
+Install using the declared marketplace name, not the GitHub repository as the suffix:
+
+```bash
+claude plugin install upwork-agent-connector@upwork-agent-plugin-marketplace
+```
+
+Inspect the loaded component:
+
+```bash
+claude plugin details upwork-agent-connector
+```
+
+Start a new session and invoke `/upwork-agent-connector:upwork-project-selection`. For temporary local use, extract the skills ZIP and run:
+
+```bash
+claude --plugin-dir /path/to/extracted-plugin
+```
+
+Installing instructions does not build the executable or register MCP. Native registration is a separate menu operation.
+
+## Codex
+
+Add the marketplace source using the supported CLI:
+
+```bash
+codex plugin marketplace add KiaroSama/Upwork-Agent-Plugin --ref main
+```
+
+Restart the ChatGPT desktop app, open **Plugins Directory**, choose **upwork-agent-plugin-marketplace**, and install **Upwork Project Selection**. Invoke `$upwork-project-selection` in Codex. Current Codex supports this Claude-compatible catalog; root OpenAI metadata takes precedence over the `.codex-plugin` fallback. Local/plugin install availability varies by surface; CLI catalog setup is not an invented universal `codex plugin install` command.
+
+Standalone skill copying below is also supported by Codex. See [current official plugin instructions](https://developers.openai.com/codex/plugins/build.md).
+
+## Cursor and Antigravity
+
+Download/extract the skills-only ZIP or a platform bundle. Copy the complete `skills/upwork-project-selection/` directory into your workspace's `.agents/skills/upwork-project-selection/`. Use a real copy, not a symlink. Inspect an existing destination before replacement; keep only one copy in scanned directories.
+
+From the extracted package on macOS/Linux:
+
+```bash
+mkdir -p /path/to/workspace/.agents/skills
+```
+
+```bash
+cp -R -n ./skills/upwork-project-selection /path/to/workspace/.agents/skills/
+```
+
+On Windows, substitute your workspace path; this command refuses an existing destination:
+
+```powershell
+$destination = 'D:\YourWorkspace\.agents\skills\upwork-project-selection'; if (Test-Path -LiteralPath $destination) { throw 'Skill already exists; review it before replacement.' }; New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null; Copy-Item -LiteralPath './skills/upwork-project-selection' -Destination $destination -Recurse
+```
+
+Reopen the workspace and invoke `/upwork-project-selection`, or ask to use the named skill. Cursor also supports portable root and `.cursor-plugin` packages through its available plugin import interface; native workspace discovery is the documented fallback. Antigravity IDE, 2.0 and CLI use `.agents/skills`; older `.agent/skills` is compatibility only.
+
+## Support and verification
+
+| Host | Contract | Verification limit |
+| --- | --- | --- |
+| Claude Code | Marketplace + `.claude-plugin` | Actual validator and isolated local marketplace install/discovery |
+| Codex | Portable OpenAI interface + `.codex-plugin` fallback | Official docs and structural checks; runtime not exercised |
+| Cursor | Portable root / `.cursor-plugin` / `.agents/skills` | [Official format](https://cursor.com/docs/plugins/building) and structural checks; runtime not exercised |
+| Antigravity | `.agents/skills` discovery | [Official docs](https://antigravity.google/docs/skills) and portable skill checks; runtime not exercised |
+
+Other Agent Skills clients use their own documented discovery/import path. No global installation, config overwrite or permission expansion occurs automatically. Three synthetic evaluation prompts exercise good-fit/new-client, commercial unpaid work, and payment-bypass/prompt-injection decisions; they are not proof of live marketplace success or every host runtime.
+
+Example: “Assess this job before I spend Connects. Here is the listing and my relevant experience.” The assessment marks unknown facts honestly, balances positive intent against risk and gives one bounded next action.
