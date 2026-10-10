@@ -233,7 +233,7 @@ async fn routed_mcp_and_refresh_work_with_saved_native_credentials() {
         let mut m=auth::manager(r.clone(),store.clone(),&format!("http://{}/mcp",f.target)).await.unwrap();let metadata=m.resolve_metadata().await.unwrap();m.set_metadata(metadata.metadata);m.configure_client(OAuthClientConfig::new("fixture-client","http://localhost:1/callback")).unwrap();
         let token=m.get_access_token().await.unwrap();assert_eq!(token,"fixture-access");assert_eq!(f.observed.tokens.load(Ordering::SeqCst),1);
         let mut t=StreamableHttpClientTransport::with_client(rmcp::transport::AuthClient::new(r.client(false,None).unwrap(),m),StreamableHttpClientTransportConfig::with_uri(format!("http://{}/mcp",f.target)));
-        let msg=serde_json::from_value(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}})).unwrap();let send=t.send(msg);let (sent,received)=tokio::join!(send,t.receive());sent.unwrap();assert!(received.is_some());t.close().await.unwrap();
+        let msg=serde_json::from_value(serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"1"}}})).unwrap();let send=t.send(msg);let (sent,received)=tokio::join!(send,t.receive());sent.unwrap();assert!(received.is_some());let initialized=serde_json::from_value(serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"})).unwrap();t.send(initialized).await.unwrap();t.close().await.unwrap();
     }).await.unwrap();
 }
 

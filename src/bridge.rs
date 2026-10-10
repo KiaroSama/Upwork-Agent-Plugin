@@ -133,6 +133,12 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
             let (sent, response) = tokio::join!(send, transport.receive());
             sent.map_err(|_| Error::Safe("Session saved but MCP initialization failed."))?;
             let response = response.ok_or(Error::Safe("MCP initialization did not return."))?;
+            let initialized = serde_json::from_value(
+                serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
+            )?;
+            send_owned(&mut transport, initialized)
+                .await
+                .map_err(|_| Error::Safe("MCP initialization notification failed."))?;
             let v = serde_json::to_value(response)?;
             if v.get("result").and_then(|v| v.get("serverInfo")).is_none() {
                 return Err(Error::Safe(
