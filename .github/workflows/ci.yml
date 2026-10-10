@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        os: [windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     defaults:
@@ -58,6 +58,12 @@ jobs:
           Copy-Item ./bin (Join-Path $sandbox 'bin') -Recurse
           & (Join-Path $sandbox 'run.ps1') -Preview
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not $IsWindows) {
+            & sh -n ./build.sh
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            & sh ./run.sh preview
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
   audit:
     name: Rust dependency audit
     runs-on: ubuntu-latest

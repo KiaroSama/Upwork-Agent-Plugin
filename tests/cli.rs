@@ -136,3 +136,29 @@ fn credential_input_and_logs_do_not_expose_values() {
         assert!(!text.contains("fixture-user"));
     }
 }
+
+#[cfg(unix)]
+#[test]
+fn unix_launcher_handles_space_paths_and_missing_binary() {
+    let dir = temp();
+    let script = dir.path().join("run.sh");
+    fs::copy("run.sh", &script).unwrap();
+    let missing = Command::new("sh")
+        .arg(&script)
+        .arg("preview")
+        .output()
+        .unwrap();
+    assert!(!missing.status.success());
+    fs::create_dir(dir.path().join("bin")).unwrap();
+    let binary = dir.path().join("bin/upwork-connector");
+    fs::copy(env!("CARGO_BIN_EXE_upwork-connector"), &binary).unwrap();
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&binary, fs::Permissions::from_mode(0o700)).unwrap();
+    let out = Command::new("sh")
+        .arg(&script)
+        .arg("preview")
+        .output()
+        .unwrap();
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("Upwork Main menu:"));
+}

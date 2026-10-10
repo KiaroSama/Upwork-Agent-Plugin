@@ -7,7 +7,8 @@
 [![Rust](https://img.shields.io/badge/Source-Rust-dea584)](#implementation)
 [![Rust 1.99+](https://img.shields.io/badge/Build-Rust_1.99%2B-dea584)](#requirements)
 [![Windows](https://img.shields.io/badge/Platform-Windows_11-0078d4)](#requirements)
-[![Linux](https://img.shields.io/badge/Core-Linux-555555)](#checks)
+[![Linux](https://img.shields.io/badge/Platform-Linux-555555)](#checks)
+[![macOS](https://img.shields.io/badge/Platform-macOS-555555)](#checks)
 [![PowerShell 7](https://img.shields.io/badge/Launcher-PowerShell_7-5391fe)](#quick-start)
 [![RMCP](https://img.shields.io/badge/RMCP-3.5.1-555555)](https://docs.rs/rmcp/3.5.1)
 [![Reqwest](https://img.shields.io/badge/Reqwest-0.13.5-555555)](https://docs.rs/reqwest/0.13.5)
@@ -41,6 +42,26 @@ pwsh -NoProfile -File ./run.ps1
 4. Choose **7 — Register** for Claude Code, reopen this project and approve/reconnect `upwork-local`.
 
 `0` returns from submenus, `exit` quits at every prompt, and Enter in the main menu opens selection. **4 — Direct** deliberately bypasses proxies; **5 — Block** disables connector networking.
+
+### macOS and Linux
+
+With an existing Rust 1.99+ toolchain and native linker, no PowerShell is required:
+
+```bash
+sh ./build.sh
+```
+
+```bash
+sh ./run.sh
+```
+
+The shell launcher resolves its own folder, supports paths containing spaces and uses private file permissions. Generate Desktop configuration where a supported Desktop client is available:
+
+```bash
+sh ./run.sh desktop-config
+```
+
+The same stdio executable works with MCP hosts on Linux; availability of a particular host application is separate from connector support.
 
 ## Claude Desktop
 
@@ -91,7 +112,7 @@ Imports append validated profiles and skip identical normalized URLs, including 
 
 ## Requirements
 
-**Build:** Rust 1.99 or newer, Cargo, platform linker/build tools (MSVC on Windows), and PowerShell 7 for the supplied scripts. **Run:** the built native executable, access to the selected proxy and a user-authorized Upwork account; no Rust/Node runtime is needed to execute the binary. Core tests run on Windows and Linux. The Windows ACL helper is Windows-only.
+**Build:** Rust 1.99 or newer, Cargo, platform linker/build tools (MSVC on Windows), and PowerShell 7 for the supplied scripts. **Run:** the built native executable, access to the selected proxy and a user-authorized Upwork account; no Rust/Node runtime is needed to execute the binary. Core tests run natively on Windows, macOS and Linux. The Windows ACL helper is Windows-only.
 
 ## Implementation
 
@@ -121,7 +142,7 @@ A browser callback page alone is not proof of completion. Wait for the terminal 
 pwsh -NoProfile -File ./scripts/verify.ps1
 ```
 
-The bounded owner limits Cargo commands to 15 minutes wall / 3 minutes idle and terminates the owned process tree on expiry. Tests have explicit network/CLI deadlines. CI uses Nextest with two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout, without retries. The final CI matrix covers Windows and Linux, Clippy, formatting, strict UTF-8/source inventory, all test suites, native build/launcher smoke, RustSec dependency audit and CodeQL. Dependabot checks Cargo and action updates; pull requests receive dependency review.
+The bounded owner limits Cargo commands to 15 minutes wall / 3 minutes idle and terminates the owned process tree on expiry. Tests have explicit network/CLI deadlines. CI uses Nextest with two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout, without retries. The final CI matrix covers Windows, macOS and Linux, Clippy, formatting, strict UTF-8/source inventory, all test suites, native build/launcher smoke, RustSec dependency audit and CodeQL. Dependabot checks Cargo and action updates; pull requests receive dependency review.
 
 Controlled localhost fixtures test HTTP/HTTPS/SOCKS authentication and remote DNS, proxy refusal/no fallback, OAuth code exchange/refresh and CSRF/issuer rejection, MCP relay/route changes, malformed config/import, atomic writes, menu, registration and log safety. TLS keys are intentionally public localhost-only fixtures. These tests do not prove live Upwork access, browser interaction or host hot reload; no marketplace writes are executed.
 
