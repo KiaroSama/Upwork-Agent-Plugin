@@ -111,7 +111,7 @@ jobs:
         with:
           tool: cargo-audit@0.22.2
           fallback: none
-      - run: cargo audit --deny warnings
+      - run: cargo-audit audit --deny warnings
         env:
           CARGO_HOME: ${{ github.workspace }}/.cargo-cache
           CARGO_TARGET_DIR: ${{ github.workspace }}/target

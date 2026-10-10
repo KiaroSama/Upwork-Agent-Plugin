@@ -12,11 +12,27 @@ fn same_path(left: &Path, right: &Path) -> bool {
         _ => false,
     }
 }
+pub fn prepare_cache(root: &Path) -> Result<()> {
+    let cache = root.join(".cache");
+    let temp = cache.join("tmp");
+    std::fs::create_dir_all(&temp)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        for path in [&cache, &temp] {
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o700))?;
+        }
+    }
+    Ok(())
+}
 pub fn desktop(root: &Path) -> Result<Value> {
     let executable = env::current_exe()?;
-    Ok(
-        json!({"mcpServers":{"upwork-local":{"command":executable,"args":["--root",root,"bridge"]}}}),
-    )
+    let temp = root.join(".cache/tmp");
+    let cache = root.join(".cache");
+    Ok(json!({"mcpServers":{"upwork-local":{
+        "command":executable,"args":["--root",root,"bridge"],
+        "env":{"TEMP":temp,"TMP":temp,"TMPDIR":temp,"XDG_CACHE_HOME":cache}
+    }}}))
 }
 pub fn register(root: &Path) -> Result<()> {
     let mcp_path = root.join(".mcp.json");

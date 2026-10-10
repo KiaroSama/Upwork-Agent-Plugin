@@ -106,6 +106,8 @@ Generate the exact configuration for your executable and folder:
 
 Merge the printed `mcpServers.upwork-local` object into `claude_desktop_config.json` without removing other servers, then restart Desktop. The `command` points directly to the native executable, and `args` explicitly bind state to this folder; do not replace it with `cargo run`, Node or a hosted HTTP entry.
 
+`--root` binds connector state, not the operating system's temporary-directory environment. Generated Desktop and project registration entries also include `env.TEMP`, `env.TMP` and `env.TMPDIR` pointing to `<installation>/.cache/tmp`, plus `env.XDG_CACHE_HOME` pointing to `<installation>/.cache`. The executable creates these private directories; the launchers apply the same per-process environment. The connector has no persistent HTTP response cache. Its profiles, account state and logs remain under the installation folder; atomic write scratch files stay beside their destination. This does not relocate Claude Desktop's own model/cache files or the separate browser's data.
+
 Registration only edits Claude Code's project configuration. Its direct-Upwork denial does **not** apply to separate Desktop or claude.ai connectors. Disable duplicate direct Upwork connectors in that host yourself if you require routed-only access. Optional official Upwork skills can remain installed; they are not bundled here.
 
 ## Skills plugin installation
@@ -197,7 +199,7 @@ See [migration notes](docs/migration.md) for state compatibility, parity fixture
 
 No raw upstream errors, account payloads, tokens, passwords or authorization links are logged. The complete login URL appears only in the explicit human sign-in terminal. There is no debug passthrough or automatic log retention. Attach only reviewed diagnostic logs to support requests, never profile or credential files.
 
-Build setup applies owner/SYSTEM-only permissions to config, credentials and log directories on Windows. After moving the project, restore those permissions before saving secrets:
+Build setup applies owner/SYSTEM-only permissions to config, credentials, cache and log directories on Windows. After moving the project, restore those permissions before saving secrets:
 
 ```powershell
 pwsh -NoProfile -File ./scripts/protect-state.ps1 -ProjectRoot .

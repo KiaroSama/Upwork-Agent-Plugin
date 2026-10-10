@@ -54,6 +54,7 @@ async fn main() {
 }
 async fn execute() -> Result<()> {
     let (root, args) = root()?;
+    upwork_connector::register::prepare_cache(&root)?;
     let command = args.first().map(String::as_str).unwrap_or("menu");
     let log = Log::new(&root, "upwork-native");
     log.event("INFO", "Native executable started version=2.0.0.");

@@ -2,7 +2,7 @@ param([Parameter(Mandatory)][string]$ProjectRoot)
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path $ProjectRoot).Path
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-foreach ($name in @('config', '.state', 'logs')) {
+foreach ($name in @('config', '.state', 'logs', '.cache')) {
     $path = Join-Path $root $name
     New-Item -ItemType Directory -Force -Path $path | Out-Null
     $acl = [System.Security.AccessControl.DirectorySecurity]::new()

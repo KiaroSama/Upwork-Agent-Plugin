@@ -4,7 +4,11 @@ $root = Split-Path -Parent $PSScriptRoot
 if (-not $env:GITHUB_ENV -or -not $env:GITHUB_PATH) { throw 'This environment setup runs only in GitHub CI.' }
 if ($ToolchainPath) {
     $bin = Join-Path $root '.ci-cache/rustup/toolchains'
-    $cargo = @(Get-ChildItem -LiteralPath $bin -Recurse -File -Filter $(if ($IsWindows) { 'cargo.exe' } else { 'cargo' }))
+    $cargoName = if ($IsWindows) { 'cargo.exe' } else { 'cargo' }
+    $cargo = @(Get-ChildItem -LiteralPath $bin -Directory | ForEach-Object {
+        $candidate = Join-Path $_.FullName "bin/$cargoName"
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { Get-Item -LiteralPath $candidate }
+    })
     if ($cargo.Count -ne 1) { throw 'Expected one project-contained CI Cargo toolchain.' }
     Split-Path -Parent $cargo[0].FullName | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
     return

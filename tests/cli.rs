@@ -108,6 +108,18 @@ fn desktop_config_and_registration_preserve_other_servers_and_skills() {
             .contains("upwork-connector")
     );
     assert!(config["mcpServers"]["upwork-local"].get("type").is_none());
+    let root = fs::canonicalize(dir.path()).unwrap();
+    for key in ["TEMP", "TMP", "TMPDIR"] {
+        assert_eq!(
+            config["mcpServers"]["upwork-local"]["env"][key],
+            root.join(".cache/tmp").to_string_lossy().as_ref()
+        );
+    }
+    assert_eq!(
+        config["mcpServers"]["upwork-local"]["env"]["XDG_CACHE_HOME"],
+        root.join(".cache").to_string_lossy().as_ref()
+    );
+    assert!(dir.path().join(".cache/tmp").is_dir());
 }
 #[test]
 fn native_menu_import_error_back_exit_and_bright_palette() {
