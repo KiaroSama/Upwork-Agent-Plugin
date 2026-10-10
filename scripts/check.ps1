@@ -1,5 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+$env:CARGO_HOME = Join-Path $root '.cargo-cache'
+$env:CARGO_TARGET_DIR = Join-Path $root 'target'
+$env:TEMP = $env:TMP = $env:TMPDIR = Join-Path $root '.ci-work'
+New-Item -ItemType Directory -Force -Path $env:CARGO_HOME, $env:TEMP | Out-Null
 Push-Location $root
 try {
     $utf8 = [Text.UTF8Encoding]::new($false, $true)

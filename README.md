@@ -207,7 +207,7 @@ A browser callback page alone is not proof of completion. Wait for the terminal 
 
 ## Developer builds (optional)
 
-Normal users download Releases; only contributors need Rust 1.99+, Cargo and a native linker. Source builds remain available with `build.ps1` on Windows or `build.sh` on Unix. Build output/cache can consume several GB under `target/`; it is not part of a release bundle. CI builds the downloadable binaries, so user installation never needs that cache.
+Normal users download Releases; only contributors need Rust 1.99+, Cargo and a native linker. Source builds remain available with `build.ps1` on Windows or `build.sh` on Unix. Build output/cache can consume several GB under `target/`; it is not part of a release bundle. CI builds the downloadable binaries, so user installation never needs that cache. Build/verification scripts confine temporary files, Cargo downloads and compiler output to this project. CI also confines its downloaded toolchain and installer/advisory caches to its own checkout. Existing shared tools are not moved or deleted; downloaded runtime bundles contain none of these caches.
 
 ## Checks
 

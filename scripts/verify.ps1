@@ -8,6 +8,10 @@ $root = Split-Path -Parent $PSScriptRoot
 $work = Join-Path $root '.ci-work'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $env:TEMP = $env:TMP = $env:TMPDIR = $work
+$env:CARGO_HOME = Join-Path $root '.cargo-cache'
+$env:CARGO_TARGET_DIR = Join-Path $root 'target'
+$env:XDG_CACHE_HOME = Join-Path $root '.ci-cache'
+New-Item -ItemType Directory -Force -Path $env:CARGO_HOME, $env:XDG_CACHE_HOME | Out-Null
 $env:CARGO_BUILD_JOBS = '2'
 $info = [Diagnostics.ProcessStartInfo]::new()
 $info.FileName = 'cargo'

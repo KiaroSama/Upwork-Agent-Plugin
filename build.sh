@@ -3,8 +3,9 @@ set -eu
 umask 077
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 command -v cargo >/dev/null 2>&1 || { printf '%s\n' 'Rust 1.99 or newer is required. No global installation is performed.' >&2; exit 1; }
-mkdir -p "$root/.ci-work" "$root/logs"
-export TMPDIR="$root/.ci-work" CARGO_BUILD_JOBS=2
+mkdir -p "$root/.ci-work" "$root/.cargo-cache" "$root/.ci-cache" "$root/logs"
+export TMPDIR="$root/.ci-work" TMP="$root/.ci-work" TEMP="$root/.ci-work" CARGO_BUILD_JOBS=2
+export CARGO_HOME="$root/.cargo-cache" CARGO_TARGET_DIR="$root/target" XDG_CACHE_HOME="$root/.ci-cache"
 log="$root/logs/upwork-build_$(date -u +%Y-%m-%d_%H-%M-%S)_UTC_$$.log"
 printf '[%s UTC] [INFO] [upwork-build] Native build started.\n' "$(date -u '+%Y-%m-%d %H:%M:%S')" > "$log"
 cd "$root"

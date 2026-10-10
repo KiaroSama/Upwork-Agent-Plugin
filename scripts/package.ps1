@@ -9,6 +9,7 @@ $destination = Join-Path $work ("package-" + [Guid]::NewGuid().ToString('N'))
 $verify = Join-Path $work ("package smoke " + [Guid]::NewGuid().ToString('N'))
 $output = Join-Path $root 'dist'
 New-Item -ItemType Directory -Force -Path $work, $output | Out-Null
+$env:TEMP = $env:TMP = $env:TMPDIR = $work
 $log = Join-Path $work ("upwork-package_" + [DateTime]::UtcNow.ToString('yyyy-MM-dd_HH-mm-ss') + '_UTC_' + [Guid]::NewGuid().ToString('N') + '.log')
 function Event([string]$level, [string]$message) {
     $line = '[{0} UTC] [{1}] [upwork-package] {2}' -f [DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm:ss'), $level, $message
