@@ -39,3 +39,5 @@ Thumbs.db
 /.idea/
 /Proxy list.txt
 /.graphifyignore
+/bin/
+/.cargo-cache/

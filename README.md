@@ -4,14 +4,14 @@
 
 [![CI](https://github.com/KiaroSama/Upwork-Agent-Plugin/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/KiaroSama/Upwork-Agent-Plugin/actions/workflows/ci.yml)
 [![GPL v3](https://img.shields.io/badge/License-GPL_v3-blue)](LICENSE)
-[![Windows 11](https://img.shields.io/badge/Platform-Windows_11-0078d4)](#requirements)
-[![Node.js 24.13.1+](https://img.shields.io/badge/Node.js-24.13.1%2B-339933)](#requirements)
-[![TypeScript](https://img.shields.io/badge/Source-TypeScript-3178c6)](#implementation)
-[![PowerShell 7](https://img.shields.io/badge/Menu-PowerShell_7-5391fe)](#quick-start)
-[![mcp-remote 0.14.3](https://img.shields.io/badge/mcp--remote-0.14.3-555555)](https://www.npmjs.com/package/mcp-remote)
-[![Undici 8.11.2](https://img.shields.io/badge/Undici-8.11.2-555555)](https://www.npmjs.com/package/undici)
+[![Rust](https://img.shields.io/badge/Source-Rust-dea584)](#implementation)
+[![Rust 1.99+](https://img.shields.io/badge/Build-Rust_1.99%2B-dea584)](#requirements)
+[![Windows](https://img.shields.io/badge/Platform-Windows_11-0078d4)](#requirements)
+[![Linux](https://img.shields.io/badge/Core-Linux-555555)](#checks)
+[![PowerShell 7](https://img.shields.io/badge/Launcher-PowerShell_7-5391fe)](#quick-start)
+[![RMCP](https://img.shields.io/badge/RMCP-3.5.1-555555)](https://docs.rs/rmcp/3.5.1)
+[![Reqwest](https://img.shields.io/badge/Reqwest-0.13.5-555555)](https://docs.rs/reqwest/0.13.5)
 [![MCP stdio](https://img.shields.io/badge/Local_transport-MCP_stdio-555555)](#implementation)
-[![Remote HTTP](https://img.shields.io/badge/Upstream_transport-Streamable_HTTP-555555)](https://github.com/upwork/upwork-agent-plugin)
 [![HTTP proxy](https://img.shields.io/badge/Proxy-HTTP-555555)](#routing)
 [![HTTPS proxy](https://img.shields.io/badge/Proxy-HTTPS-555555)](#routing)
 [![SOCKS5 proxy](https://img.shields.io/badge/Proxy-SOCKS5_remote_DNS-555555)](#routing)
@@ -19,120 +19,115 @@
 
 </div>
 
-Local connector for **Upwork's hosted MCP**, not an offline or self-hosted Upwork backend. Dependencies, proxy profiles, auth storage, caches and logs belong to this project. Existing Node and PowerShell installations are reused, not installed globally.
+Native Rust connector for **Upwork's hosted MCP**, not an offline or self-hosted Upwork backend. This independent project is not the official Upwork plugin. It provides a terminal menu, saved proxy profiles and fail-closed routing. Node.js and `mcp-remote` are not runtime dependencies.
 
 ## Quick start
 
-Clone or download this repository, open its folder in PowerShell 7, and restore the pinned dependencies:
-
-```bash
-npm ci --ignore-scripts --cache ./.cache/npm
-```
-
-Before saving credentials, protect the local state directories on Windows:
+Clone this repository and open its folder in PowerShell 7. Build with an existing Rust toolchain:
 
 ```powershell
-pwsh -NoProfile -File ./scripts/protect-state.ps1 -ProjectRoot .
+pwsh -NoProfile -File ./build.ps1
 ```
 
-Register the connector for this Claude Code project:
-
-```bash
-node src/manage.ts register
-```
-
-Open the menu:
+The build restores dependencies from `Cargo.lock`, writes the native executable under `bin/`, and protects local state directories on Windows. It never installs global software automatically.
 
 ```powershell
 pwsh -NoProfile -File ./run.ps1
 ```
 
-1. Choose **2 — Import proxy list from file**. Enter the path with or without outer quotes; Enter uses `Proxy list.txt` in this folder if you have placed your own list there; no real proxy list is distributed. Alternatively choose **3** to add one URL manually.
-2. Choose **1 — Select proxy**, then its displayed number. Display names such as `UK 5` are preserved. Initial mode is **blocked**; importing a file does not select a route or connect.
-3. Choose **6 — Sign in** yourself. The terminal prints a complete authorization link. Copy it into your browser on this computer; keep the terminal open for the localhost callback. The helper confirms that the session was saved and stops automatically. Do not paste the link or callback into chat.
-4. Start a **new Claude Code session in this folder**, approve `upwork-local` if prompted, and reconnect it. Existing sessions may retain the old server registration until reopened.
+1. Choose **2 — Import proxy list from file** and enter your UTF-8 file path, with or without quotes. Enter defaults to your own `Proxy list.txt` in this folder; no real proxy list is distributed.
+2. Choose **1 — Select proxy**, then its displayed number. Initial mode is **blocked**; import alone does not select a route or connect.
+3. Choose **6 — Sign in** yourself. Copy the complete authorization URL into your browser on the same computer. Keep the terminal open for the localhost callback; wait for the terminal's saved-session and MCP-initialization confirmation.
+4. Choose **7 — Register** for Claude Code, reopen this project and approve/reconnect `upwork-local`.
 
-**4 — Direct** deliberately bypasses proxy routing. **5 — Block** disables connector networking. **7 — Register** refreshes project registration after moving the folder or changing Node's location. No global Claude configuration is changed. The installed plugin's skills remain available; its direct remote MCP entry is denied for this project.
+`0` returns from submenus, `exit` quits at every prompt, and Enter in the main menu opens selection. **4 — Direct** deliberately bypasses proxies; **5 — Block** disables connector networking.
+
+## Claude Desktop
+
+Generate the exact configuration for your executable and folder:
+
+```powershell
+./bin/upwork-connector.exe --root . desktop-config
+```
+
+Merge the printed `mcpServers.upwork-local` object into `claude_desktop_config.json` without removing other servers, then restart Desktop. The `command` points directly to the native executable, and `args` explicitly bind state to this folder; do not replace it with `cargo run`, Node or a hosted HTTP entry.
+
+Registration only edits Claude Code's project configuration. Its direct-Upwork denial does **not** apply to separate Desktop or claude.ai connectors. Disable duplicate direct Upwork connectors in that host yourself if you require routed-only access. Optional official Upwork skills can remain installed; they are not bundled here.
+
+## Agent and CLI control
+
+An agent with local shell access uses the same native CLI; no extra management MCP tools are introduced:
+
+```powershell
+./bin/upwork-connector.exe --root . status
+```
+
+```powershell
+./bin/upwork-connector.exe --root . select UK-1
+```
+
+`select` uses the internal `name` returned by `status`, not a spaced display label. Other commands are `import PATH`, `add` (JSON from stdin), `direct`, `block`, `sign-in`, `bridge`, `register`, `desktop-config` and `preview`. Reconnect MCP after changing a route. Credential-bearing URLs never belong in command arguments.
 
 ## Proxy list format
 
-One record per UTF-8 line (BOM, blank lines and `#` comments accepted):
+One record per UTF-8 line, with optional BOM, blank lines and `#` comments:
 
 ```text
 socks5://proxy.example.com:12004:example-user:example-password:UK 5
 http://proxy.example.com:8080:example-user:example-password:UK 1
 ```
 
-These are non-secret examples. The **last field is the proxy display name**, including spaces; the preceding fields are host, port, username and password. Standard proxy URLs are also accepted. Colon-delimited credentials cannot themselves contain literal colons; use a standard URL with percent-encoded userinfo for those.
+These are non-secret examples. The last field is the display name, including spaces. Standard proxy URLs are also accepted. Colon-delimited credentials cannot contain literal colons; use a standard URL with percent-encoded userinfo instead.
 
-Imports append profiles and skip identical normalized destinations (including credentials). Existing settings and the active route stay unchanged. One invalid line rejects the whole import; errors show line numbers, not private contents. File paths containing spaces and outer quotes work. The input is never modified or published. `0` returns from submenus, `exit` quits at any prompt; Enter in the main menu opens proxy selection.
+Imports append validated profiles and skip identical normalized URLs, including credentials. One bad line rejects the complete import without partial writes; errors show only the line number. Labels are preserved separately from safe identifiers. Import does not change the active route or modify the input file.
 
 ## Routing
 
-- HTTP and HTTPS use CONNECT tunnels. SOCKS5 sends destination hostnames to the proxy; `socks5h://` is accepted as an alias.
-- Example non-secret URLs: `http://127.0.0.1:7890`, `https://proxy.example.com:8443`, `socks5://127.0.0.1:1080`.
-- The selected proxy is mandatory for all connector-owned MCP, OAuth discovery, registration, token and refresh requests. Proxy failure produces an error, **never direct fallback**. `NO_PROXY` cannot bypass it.
-- A configuration change stops the old connection; reconnect MCP to apply the selected route. In-flight work is interrupted, not replayed automatically. The dispatcher checks configuration before each request; active streams are stopped when the watcher observes the change.
-- This does **not** route Claude's model traffic, other MCPs, or your browser. Browser authorization uses the browser's own network settings. The hosted Upwork service still receives requests.
-- Undici SOCKS5 support is experimental. Proxy-host DNS may be local; destination DNS is delegated to the proxy.
+- HTTP proxies forward HTTP requests and tunnel HTTPS with CONNECT; HTTPS proxies encrypt the connection to the proxy. SOCKS5/SOCKS5h send destination hostnames to the proxy for remote DNS.
+- Every connector-owned MCP, OAuth discovery, registration, token exchange and refresh request uses its selected route. A failed proxy produces an error, **never direct fallback**. Environment/system proxy and `NO_PROXY` settings cannot bypass the explicit route.
+- Changing configuration invalidates the route and stops the old connection when the watcher observes it (100 ms interval). New requests also check the selection; interrupted work is not replayed automatically. Reconnect the MCP host to apply the new route.
+- This does not route Claude model traffic, other MCP servers or browser traffic. Your browser uses its own network settings, and the Upwork backend remains hosted.
+- An authorization-server mismatch fails closed; it does not delete your original session. Explicit Sign in can obtain a new authorization.
 
 ## Requirements
 
-Existing **Node.js >=24.13.1**, **PowerShell 7**, network access to the selected proxy, and a user-authorized Upwork account. Authenticated tool discovery is not verified until you complete sign-in. No marketplace write operations are part of installation.
+**Build:** Rust 1.99 or newer, Cargo, platform linker/build tools (MSVC on Windows), and PowerShell 7 for the supplied scripts. **Run:** the built native executable, access to the selected proxy and a user-authorized Upwork account; no Rust/Node runtime is needed to execute the binary. Core tests run on Windows and Linux. The Windows ACL helper is Windows-only.
 
 ## Implementation
 
-TypeScript runs with Node's native type stripping; no build or global package is needed. The pinned `mcp-remote` package handles protocol/OAuth, and the local bootstrap selects the Undici dispatcher. A process-local module resolver blocks automatic browser opening in normal MCP mode. Human-run Sign in prints the complete authorization URL instead of opening any browser. A bounded supervisor sends MCP initialization and requires a usable token file before claiming success.
+Rust 2024 modules own profiles, file import, routing, credentials, OAuth, MCP relay, logging and the menu. The official [RMCP SDK](https://github.com/modelcontextprotocol/rust-sdk) implements protocol and OAuth state machines; [Reqwest](https://github.com/seanmonstar/reqwest) supplies the explicitly configured HTTP/proxy clients. Both OAuth redirect policies use routed clients; SDK defaults are never used for outbound requests.
 
-Project registration writes the local connector entry and a project-only denial of direct `https://mcp.upwork.com/mcp` entries. Registration alone is not proof that the running host loaded it. Claude's own session/trust state remains managed by Claude outside this connector; the connector's new files stay here.
+The relay forwards JSON-RPC protocol messages rather than enumerating or reimplementing Upwork tools. SDK debug tracing is deliberately disabled because its events can contain OAuth secrets. Manual sign-in prints a link, never launches an OS browser. Success requires both usable persisted credentials and a successful MCP initialization response.
 
-Dependencies can be restored using the lockfile:
-
-```bash
-npm ci --ignore-scripts --cache ./.cache/npm
-```
-
-Then choose Register from the menu. Saved profiles and account sessions are local runtime data, not part of the public source. A fresh clone starts blocked even without a configuration file.
-
-### Agent control and Claude Desktop
-
-An agent with local shell access can use the same CLI; this is not an extra MCP tool:
-
-```bash
-node src/manage.ts status
-```
-
-```bash
-node src/manage.ts select PROFILE_NAME
-```
-
-Selection uses the internal `name` shown by `status`; display labels may contain spaces. Reconnect the MCP host after any route change. `direct` and `block` are explicit CLI commands, never automatic fallback.
-
-For Claude Desktop, run Register and copy the generated `mcpServers.upwork-local` object into Desktop's `mcpServers` configuration. Its `command`, `args` and `env` already contain the paths for your clone; omit the Code-only `type` field if Desktop requires it. Restart Desktop. Registration does not edit global Desktop configuration. The project-only denial of the official direct MCP applies to Claude Code in this project, not to separate Desktop or claude.ai connectors; disable any duplicate direct Upwork connector in that host yourself if you require routed-only access.
+See [migration notes](docs/migration.md) for state compatibility, parity fixtures and rollback. Saved legacy sessions are read without modifying their files; native refresh/sign-in writes separate Rust state.
 
 ## Logs and private state
 
-`logs/` contains one UTF-8 file per executable run, named `upwork-bridge_YYYY-MM-DD_HH-mm-ss_UTC.log` or `upwork-menu_YYYY-MM-DD_HH-mm-ss_UTC.log`; collisions get a suffix. Entries use `[YYYY-MM-DD HH:mm:ss UTC] [LEVEL] [COMPONENT] Message`. INFO, WARNING and ERROR record startup, safe route metadata, changes, failures and exit codes. Logging initialization failure falls back to safe stderr.
+`logs/` receives one UTF-8 log per executable run, with names such as `upwork-native_YYYY-MM-DD_HH-mm-ss_UTC.log` and `upwork-bridge_YYYY-MM-DD_HH-mm-ss_UTC.log`; collisions receive a suffix. Entries use `[YYYY-MM-DD HH:mm:ss UTC] [LEVEL] [COMPONENT] Message`. INFO, WARNING and ERROR describe fixed safe startup, callback, failure and shutdown events. File initialization failure falls back to safe stderr.
 
-Upstream verbose/debug output is intentionally disabled: it can contain OAuth URLs, tokens or account payloads. No `--debug` passthrough exists. Safe fixed error codes and discovery/connection stages are recorded; the copyable authorization link is shown only in the human sign-in terminal, never in file logs. Logs contain only fixed safe events; do not attach credential files or proxy settings to support reports. There is no automatic retention/deletion policy; remove old diagnostic logs manually when no longer needed.
+No raw upstream errors, account payloads, tokens, passwords or authorization links are logged. The complete login URL appears only in the explicit human sign-in terminal. There is no debug passthrough or automatic log retention. Attach only reviewed diagnostic logs to support requests, never profile or credential files.
 
-Private config, auth and log directories receive owner/SYSTEM-only Windows permissions during setup. Runtime credentials are ignored and must never be published. A browser success page alone confirms receipt of a callback, not successful token exchange: wait for the terminal’s saved-session message. If the callback is blocked, allow localhost/127.0.0.1 directly in your browser proxy configuration only; connector traffic still uses its selected proxy. A moved folder may inherit different ACLs: run `scripts/protect-state.ps1 -ProjectRoot <folder>` before storing secrets. No external accounts or auth credentials were copied from another installation.
+Build setup applies owner/SYSTEM-only permissions to config, credentials and log directories on Windows. After moving the project, restore those permissions before saving secrets:
+
+```powershell
+pwsh -NoProfile -File ./scripts/protect-state.ps1 -ProjectRoot .
+```
+
+A browser callback page alone is not proof of completion. Wait for the terminal confirmation. If your browser proxy blocks localhost, exempt localhost/127.0.0.1 in **browser settings only**; connector-owned requests still use their selected route.
 
 ## Checks
 
-```bash
-node scripts/verify.ts
+```powershell
+pwsh -NoProfile -File ./scripts/verify.ps1
 ```
 
-Native tests have a 10-second case timeout and one worker. The outer owner enforces 60 seconds wall / 20 seconds idle and reaps its child on expiry. Controlled localhost proxy/TLS fixtures cover routing, refused proxy, native/upstream fetch compatibility, profile persistence, browser gate and route-change termination. They do not prove real Upwork account access or host hot reload. TLS fixtures are intentionally public test-only keys, never used for production.
+The bounded owner limits Cargo commands to 15 minutes wall / 3 minutes idle and terminates the owned process tree on expiry. Tests have explicit network/CLI deadlines. CI uses Nextest with two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout, without retries. The final CI matrix covers Windows and Linux, Clippy, formatting, strict UTF-8/source inventory, all test suites, native build/launcher smoke, RustSec dependency audit and CodeQL. Dependabot checks Cargo and action updates; pull requests receive dependency review.
 
-GitHub Actions runs the complete discovered test suite on Windows with Node.js 24, from a clean checkout, plus UTF-8/native syntax/PowerShell parse checks and `npm audit`. The job is bounded to 10 minutes. Tests use disposable project-owned state and localhost fixtures, never a personal session or real proxy. Dependabot checks npm and GitHub Actions updates; pull requests also receive dependency review. CodeQL analyzes the public TypeScript source. No compilation build or TypeScript type-check is configured: native stripping does not validate types.
+Controlled localhost fixtures test HTTP/HTTPS/SOCKS authentication and remote DNS, proxy refusal/no fallback, OAuth code exchange/refresh and CSRF/issuer rejection, MCP relay/route changes, malformed config/import, atomic writes, menu, registration and log safety. TLS keys are intentionally public localhost-only fixtures. These tests do not prove live Upwork access, browser interaction or host hot reload; no marketplace writes are executed.
 
 ## License and provenance
 
-Copyright (C) 2026 KiaroSama. Original project code is licensed under **GPL-3.0-only**; see [LICENSE](LICENSE). It is provided without warranty.
-
-This is an independent connector, not the official Upwork plugin or a self-hosted Upwork service. [Upwork's official plugin](https://github.com/upwork/upwork-agent-plugin) supplies optional agent skills and declares the hosted endpoint; its source/skills are not bundled here. [mcp-remote](https://github.com/punkpeye/mcp-remote) provides transport and OAuth, and [Undici](https://github.com/nodejs/undici) provides HTTP/proxy dispatch. Both dependencies are MIT-licensed and retain their own licenses when installed. This repository publishes original integration code and public test fixtures, not third-party dependency copies. Installing dependencies retrieves their notices with the packages; preserve those notices when redistributing them.
+Copyright (C) 2026 KiaroSama. Original code is **GPL-3.0-only**; see [LICENSE](LICENSE). Provided without warranty. Dependencies retain their own licenses and are restored from Cargo rather than vendored. Preserve their notices when redistributing them. RMCP is Apache-2.0; Reqwest is MIT/Apache-2.0. [Upwork's official plugin](https://github.com/upwork/upwork-agent-plugin) supplies optional skills and the hosted endpoint declaration, not this connector's implementation.
 
 ## Donate
 

@@ -1,0 +1,111 @@
+{
+  "source": "3748197 Node24.21.0",
+  "cases": [
+    {
+      "input": {
+        "version": 1,
+        "mode": "blocked",
+        "selected": null,
+        "profiles": []
+      },
+      "valid": true,
+      "status": {
+        "mode": "blocked",
+        "selected": null,
+        "profiles": []
+      }
+    },
+    {
+      "input": {
+        "version": 1,
+        "mode": "proxy",
+        "selected": "UK-5",
+        "profiles": [
+          {
+            "name": "UK-5",
+            "label": "UK 5",
+            "url": "socks5://example-user:p%40ss%25word@proxy.example:12004"
+          }
+        ]
+      },
+      "valid": true,
+      "status": {
+        "mode": "proxy",
+        "selected": "UK-5",
+        "profiles": [
+          {
+            "name": "UK-5",
+            "label": "UK 5",
+            "url": "socks5://proxy.example:12004"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "version": 1,
+        "mode": "proxy",
+        "selected": "missing",
+        "profiles": []
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "version": 1,
+        "mode": "direct",
+        "selected": null,
+        "profiles": [
+          {
+            "name": "test",
+            "url": "http://proxy.example:80"
+          }
+        ]
+      },
+      "valid": true,
+      "status": {
+        "mode": "direct",
+        "selected": null,
+        "profiles": [
+          {
+            "name": "test",
+            "label": "test",
+            "url": "http://proxy.example/"
+          }
+        ]
+      }
+    },
+    {
+      "input": {
+        "version": 1,
+        "mode": "direct",
+        "selected": null,
+        "profiles": [
+          {
+            "name": "test",
+            "url": "ftp://proxy.example:21"
+          }
+        ]
+      },
+      "valid": false
+    },
+    {
+      "input": {
+        "version": 1,
+        "mode": "blocked",
+        "selected": null,
+        "profiles": [
+          {
+            "name": "test",
+            "url": "https://proxy.example:443"
+          },
+          {
+            "name": "test",
+            "url": "http://proxy.example:80"
+          }
+        ]
+      },
+      "valid": false
+    }
+  ]
+}

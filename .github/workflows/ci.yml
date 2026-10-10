@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, refactor/native-rust]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -12,32 +12,62 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test:
-    name: Windows Node 24 checks
-    runs-on: windows-latest
-    timeout-minutes: 10
+    name: Rust checks (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     defaults:
       run:
         shell: pwsh
     env:
       CI: 'true'
       NO_COLOR: '1'
-      NODE_OPTIONS: ''
-      NODE_DEBUG: ''
-      NODE_USE_ENV_PROXY: '0'
+      CARGO_BUILD_JOBS: '2'
+      RUST_BACKTRACE: '0'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable, checked 2026-10-10
         with:
-          node-version: '24'
-          check-latest: true
-          package-manager-cache: false
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts --cache ./.cache/npm
-      - name: Validate text and native source syntax
-        run: npm run check
-      - name: Run all bounded regression tests
-        run: npm test
-      - name: Audit dependencies
-        run: npm audit --audit-level=high --cache ./.cache/npm
+          toolchain: '1.99.0'
+          components: rustfmt, clippy
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: cargo-nextest@0.9.148
+          fallback: none
+      - name: Validate source inventory and UTF-8
+        run: ./scripts/check.ps1
+      - name: Check formatting
+        run: ./scripts/verify.ps1 -CargoArgs @('fmt', '--check')
+      - name: Check Rust lints
+        run: ./scripts/verify.ps1 -CargoArgs @('clippy', '--locked', '--all-targets', '--', '-D', 'warnings')
+      - name: Run every bounded test
+        run: ./scripts/verify.ps1 -CargoArgs @('nextest', 'run', '--locked', '--all-targets', '--profile', 'ci')
+      - name: Build and smoke native launcher
+        run: |
+          ./build.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $sandbox = Join-Path $PWD '.ci-work/launcher smoke'
+          New-Item -ItemType Directory -Force -Path $sandbox | Out-Null
+          Copy-Item ./run.ps1 $sandbox
+          Copy-Item ./bin (Join-Path $sandbox 'bin') -Recurse
+          & (Join-Path $sandbox 'run.ps1') -Preview
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  audit:
+    name: Rust dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@ab6895351a88b908e96a4697860d4ffea5e57dbe # v2.87.27
+        with:
+          tool: cargo-audit@0.22.2
+          fallback: none
+      - run: cargo audit --deny warnings

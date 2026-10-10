@@ -1,0 +1,40 @@
+[package]
+name = "upwork-connector"
+version = "2.0.0"
+edition = "2024"
+rust-version = "1.99"
+license = "GPL-3.0-only"
+repository = "https://github.com/KiaroSama/Upwork-Agent-Plugin"
+description = "Native fail-closed Upwork MCP connector"
+
+[dependencies]
+async-trait = "0.1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+futures = "0.3"
+http = "1"
+md-5 = "0.11"
+percent-encoding = "2"
+regex = "1"
+reqwest = { version = "=0.13.5", default-features = false, features = ["rustls", "json", "stream", "socks"] }
+rmcp = { version = "=3.5.1", default-features = false, features = ["client", "auth", "transport-streamable-http-client-reqwest", "reqwest"] }
+rpassword = "7"
+sse-stream = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt", "macros", "net", "io-util", "io-std", "sync", "time", "signal"] }
+uuid = { version = "1", features = ["v4"] }
+url = "2"
+
+[dev-dependencies]
+axum = "0.8"
+base64 = "0.23"
+tempfile = "3"
+tokio-rustls = "0.26"
+rustls-pemfile = "2"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+strip = true
