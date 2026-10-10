@@ -92,6 +92,37 @@ async fn execute() -> Result<()> {
             println!("Proxy saved.");
             Ok(())
         }
+        "local-settings" => {
+            match args.get(1).map(String::as_str) {
+                None => println!(
+                    "{}",
+                    serde_json::json!({"url":upwork_connector::settings::read(&root)?.public_url()?})
+                ),
+                Some("set") => {
+                    let mut input = String::new();
+                    io::stdin().take(8193).read_to_string(&mut input)?;
+                    if input.len() > 8192 {
+                        return Err(Error::Safe("Local proxy input too large."));
+                    }
+                    let value = serde_json::from_str(input.trim_start_matches('\u{feff}'))?;
+                    upwork_connector::settings::save(&root, value)?;
+                    println!(
+                        "Local proxy settings saved. Select local-proxy and reconnect MCP to apply."
+                    );
+                }
+                _ => {
+                    return Err(Error::Safe(
+                        "Use local-settings or local-settings set with JSON on stdin.",
+                    ));
+                }
+            }
+            Ok(())
+        }
+        "local-proxy" => {
+            upwork_connector::settings::select(&root)?;
+            println!("Local proxy selected. Reconnect MCP to apply.");
+            Ok(())
+        }
         "select" | "direct" | "block" => {
             config::update(&path, |c| {
                 c.mode = match command {
@@ -130,7 +161,7 @@ async fn execute() -> Result<()> {
             Ok(())
         }
         _ => Err(Error::Safe(
-            "Usage: upwork-connector [--root PATH] menu|status|import PATH|add|select NAME|direct|block|sign-in|bridge|register|desktop-config",
+            "Usage: upwork-connector [--root PATH] menu|status|import PATH|add|select NAME|local-settings [set]|local-proxy|direct|block|sign-in|bridge|register|desktop-config",
         )),
     };
     log.event(

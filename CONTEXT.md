@@ -16,6 +16,14 @@ _Avoid_: Offline Upwork, self-hosted Upwork
 A saved, named proxy destination the user can select for the local connector.
 _Avoid_: Automatic fallback, proxy rotation
 
+**Local proxy settings**:
+The user's configured local intermediary endpoint, selected explicitly instead of a remote proxy profile.
+_Avoid_: Upwork service port, OAuth callback port
+
+**Worthwhile opportunity**:
+A job with supported buyer readiness, proven freelancer fit and acceptable business value, not merely a job the freelancer could win.
+_Avoid_: Guaranteed hire
+
 **Blocked mode**:
 The selected state in which the local connector cannot contact Upwork or its authentication services.
 _Avoid_: Direct by default

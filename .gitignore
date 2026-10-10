@@ -26,6 +26,7 @@
 /.ci-work/
 /.ci-cache/
 /config/connections.json
+/config/local-proxy.json
 /.mcp.json
 /dist/
 /build/

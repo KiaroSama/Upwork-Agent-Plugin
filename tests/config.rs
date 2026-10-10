@@ -168,6 +168,55 @@ fn log_collision_utc_format_and_safe_failure() {
     log.event("ERROR", "Safe fallback");
 }
 #[test]
+fn local_settings_port_validation_preserves_profiles_and_selection() {
+    use upwork_connector::settings::{self, LocalProxy};
+    let dir = temp();
+    let path = dir.path().join("config/connections.json");
+    assert_eq!(
+        settings::read(dir.path()).unwrap().url,
+        "socks5h://127.0.0.1:1595"
+    );
+    config::update(&path, |c| {
+        c.profiles.push(config::Profile {
+            name: "UK-1".into(),
+            url: "http://proxy.example:12004".into(),
+            label: Some("UK 1".into()),
+        });
+        c.mode = Mode::Proxy;
+        c.selected = Some("UK-1".into());
+        Ok(())
+    })
+    .unwrap();
+    let before = fs::read(&path).unwrap();
+    settings::save(
+        dir.path(),
+        LocalProxy {
+            url: "http://127.0.0.1:1596".into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(before, fs::read(&path).unwrap());
+    let saved = fs::read(dir.path().join("config/local-proxy.json")).unwrap();
+    for url in [
+        "socks5h://127.0.0.1:0",
+        "http://127.0.0.1:65536",
+        "socks5://127.0.0.1",
+    ] {
+        assert!(settings::save(dir.path(), LocalProxy { url: url.into() }).is_err());
+        assert_eq!(
+            saved,
+            fs::read(dir.path().join("config/local-proxy.json")).unwrap()
+        );
+    }
+    let route = upwork_connector::route::Route::new(path.clone()).unwrap();
+    settings::select(dir.path()).unwrap();
+    assert!(route.check().is_err());
+    let config = config::read(&path).unwrap();
+    assert_eq!(config.selected.as_deref(), Some("local-proxy"));
+    assert_eq!(config.profiles[0].url, "http://proxy.example:12004");
+    assert_eq!(config.profiles[1].url, "http://127.0.0.1:1596");
+}
+#[test]
 fn legacy_session_conversion_is_read_only() {
     let dir = temp();
     let store = Store {

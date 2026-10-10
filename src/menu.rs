@@ -61,6 +61,8 @@ pub fn preview(root: &Path) -> Result<()> {
         "5. Block connections",
         "6. Sign in to Upwork",
         "7. Register MCP in Claude",
+        "8. Local proxy settings (default port 1595)",
+        "9. Select local proxy from settings",
     ] {
         println!("  {item}");
     }
@@ -95,7 +97,17 @@ if matches!(value.to_lowercase().as_str(),"y"|"yes"){config::update(&path,|c|{c.
             "5"=>{config::update(&path,|c|{c.mode=Mode::Blocked;c.selected=None;Ok(())})?;},
             "6"=>crate::bridge::run(root,crate::ENDPOINT,true).await?,
             "7"=>{register::register(root)?;println!("Project MCP registered. Reopen Claude and reconnect upwork-local.");},
-            _=>return Err(Error::Safe("Enter a menu number from 1 to 7, or exit.")),
+            "8"=>{
+                let current=crate::settings::read(root)?;
+                println!("Current local proxy: {}",current.public_url()?);
+                let value=answer("Local proxy URL (explicit port; no change=Enter)","keep",true)?;
+                if value=="0" || value=="keep"{return Ok(());}
+                if value.eq_ignore_ascii_case("exit"){return Err(Error::Safe("MENU_EXIT"));}
+                crate::settings::save(root,crate::settings::LocalProxy{url:value})?;
+                println!("Settings saved; use option 9 to apply. Imported proxy ports unchanged.");
+            },
+            "9"=>crate::settings::select(root)?,
+            _=>return Err(Error::Safe("Enter a menu number from 1 to 9, or exit.")),
         }Ok::<(),Error>(())}.await;
         if let Err(Error::Safe("MENU_EXIT")) = result {
             return Ok(());

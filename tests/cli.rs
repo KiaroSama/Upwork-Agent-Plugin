@@ -137,6 +137,38 @@ fn credential_input_and_logs_do_not_expose_values() {
     }
 }
 
+#[test]
+fn local_proxy_settings_cli_menu_and_safe_invalid_input() {
+    let dir = temp();
+    let out = command(dir.path(), &["local-settings"], "");
+    assert!(out.status.success());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&out.stdout).unwrap()["url"],
+        "socks5h://127.0.0.1:1595"
+    );
+    let out = command(dir.path(), &["menu"], "8\nhttp://127.0.0.1:1596\n9\nexit\n");
+    assert!(out.status.success());
+    assert!(String::from_utf8_lossy(&out.stdout).contains("default port 1595"));
+    let out = command(dir.path(), &["status"], "");
+    let status: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(status["selected"], "local-proxy");
+    assert_eq!(status["profiles"][0]["url"], "http://127.0.0.1:1596/");
+    let before = fs::read(dir.path().join("config/local-proxy.json")).unwrap();
+    assert!(
+        !command(
+            dir.path(),
+            &["local-settings", "set"],
+            r#"{"url":"http://127.0.0.1:0"}"#
+        )
+        .status
+        .success()
+    );
+    assert_eq!(
+        before,
+        fs::read(dir.path().join("config/local-proxy.json")).unwrap()
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn unix_launcher_handles_space_paths_and_missing_binary() {

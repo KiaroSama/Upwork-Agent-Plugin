@@ -75,6 +75,12 @@ Merge the printed `mcpServers.upwork-local` object into `claude_desktop_config.j
 
 Registration only edits Claude Code's project configuration. Its direct-Upwork denial does **not** apply to separate Desktop or claude.ai connectors. Disable duplicate direct Upwork connectors in that host yourself if you require routed-only access. Optional official Upwork skills can remain installed; they are not bundled here.
 
+## Skills plugin
+
+The bundled [upwork-project-selection](skills/upwork-project-selection/SKILL.md) skill evaluates buying intent, freelancer fit and contract value before investing time or Connects. It is read-only and works with pasted job evidence or authorized MCP reads.
+
+Claude, Codex, Cursor and portable Agent Plugins manifests share one skill tree. Antigravity can discover the same standard skill. See the [skill catalog and client loading guide](docs/skills.md); installation does not replace official Upwork skills or enable a duplicate direct MCP route.
+
 ## Agent and CLI control
 
 An agent with local shell access uses the same native CLI; no extra management MCP tools are introduced:
@@ -88,6 +94,14 @@ An agent with local shell access uses the same native CLI; no extra management M
 ```
 
 `select` uses the internal `name` returned by `status`, not a spaced display label. Other commands are `import PATH`, `add` (JSON from stdin), `direct`, `block`, `sign-in`, `bridge`, `register`, `desktop-config` and `preview`. Reconnect MCP after changing a route. Credential-bearing URLs never belong in command arguments.
+
+## Local proxy settings
+
+**8 — Local proxy settings** edits the endpoint; default is `socks5h://127.0.0.1:1595`. Change its scheme, host or explicit port to match your existing local proxy. **9 — Select local proxy** applies it; reconnect MCP afterward. No local proxy service is installed or started. Changing settings alone does not switch routes or rewrite imported profiles, including their ports.
+
+Agents read the sanitized setting with `local-settings`, update it using `local-settings set` with `{"url":"http://127.0.0.1:1595"}` on stdin, and select it using `local-proxy`. Credentials belong only in protected stdin/config, never command arguments. Local settings are independent from OAuth's callback port and Upwork's HTTPS destination port 443.
+
+Remote destination DNS prevents local destination lookups, but does **not** guarantee that a proxy provider's resolver IP is in the same country as its exit IP. For a local proxy, configure its upstream DNS/DoH routing in that proxy application. Browser DNS and browser timezone are outside this connector. The connector creates no timezone header or field; UTC log/expiry timestamps are not timezone fingerprint spoofing. Caller-owned fields inside transparent MCP messages are forwarded unchanged.
 
 ## Proxy list format
 

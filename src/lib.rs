@@ -10,6 +10,7 @@ pub mod logging;
 pub mod menu;
 pub mod register;
 pub mod route;
+pub mod settings;
 pub mod storage;
 
 pub const ENDPOINT: &str = "https://mcp.upwork.com/mcp";

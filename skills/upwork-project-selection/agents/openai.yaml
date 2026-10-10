@@ -1,0 +1,4 @@
+interface:
+  display_name: "Upwork Project Selection"
+  short_description: "Choose worthwhile Upwork jobs before applying"
+  default_prompt: "Use $upwork-project-selection to assess this job before I spend Connects."
