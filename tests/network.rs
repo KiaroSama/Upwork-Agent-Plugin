@@ -36,7 +36,7 @@ async fn proxy_protocols_credentials_remote_dns_and_refusal() {
             let client = r
                 .builder(true, Some(Duration::from_secs(2)))
                 .unwrap()
-                .tls_certs_merge([cert.clone()])
+                .tls_certs_only([cert.clone()])
                 .build()
                 .unwrap();
             let response = client
@@ -59,7 +59,7 @@ async fn proxy_protocols_credentials_remote_dns_and_refusal() {
             let refused = r
                 .builder(false, Some(Duration::from_secs(2)))
                 .unwrap()
-                .tls_certs_merge([cert.clone()])
+                .tls_certs_only([cert.clone()])
                 .build()
                 .unwrap()
                 .get(format!("http://127.0.0.1:{}/", f.target.port()))
