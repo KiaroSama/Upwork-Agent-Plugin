@@ -1,0 +1,19 @@
+{
+  "name": "upwork-local-connector",
+  "version": "1.0.0",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "repository": { "type": "git", "url": "https://github.com/KiaroSama/Upwork-Agent-Plugin.git" },
+  "type": "module",
+  "description": "Project-contained Upwork MCP connector with fail-closed proxy profiles",
+  "engines": { "node": ">=24.13.1" },
+  "scripts": {
+    "start": "node src/bridge.ts",
+    "test": "node scripts/verify.ts",
+    "check": "node scripts/check.ts"
+  },
+  "dependencies": {
+    "mcp-remote": "0.14.3",
+    "undici": "8.11.2"
+  }
+}
