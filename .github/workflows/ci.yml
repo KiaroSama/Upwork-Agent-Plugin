@@ -76,6 +76,8 @@ jobs:
             & sh ./run.sh preview
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Verify safe cache cleanup
+        run: ./scripts/check-cleanup.ps1
       - name: Package and verify downloadable native archive
         run: ./scripts/package.ps1 -Platform '${{ matrix.platform }}' -SourceSha '${{ github.sha }}'
       - name: Upload ready-to-run archive and checksum

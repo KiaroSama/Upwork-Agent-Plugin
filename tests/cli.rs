@@ -206,3 +206,26 @@ fn unix_launcher_handles_space_paths_and_missing_binary() {
     assert!(out.status.success());
     assert!(String::from_utf8_lossy(&out.stdout).contains("Upwork Main menu:"));
 }
+
+#[test]
+fn cleanup_cli_dry_run_apply_and_invalid_options() {
+    let dir = temp();
+    assert!(command(dir.path(), &["cleanup"], "").status.success());
+    let path = dir
+        .path()
+        .join(".cache/tmp")
+        .join(format!("upwork-{}.tmp", uuid::Uuid::new_v4()));
+    fs::write(&path, "fresh").unwrap();
+    let out = command(dir.path(), &["cleanup", "--apply"], "");
+    assert!(out.status.success());
+    assert_eq!(
+        serde_json::from_slice::<Value>(&out.stdout).unwrap()["removed"],
+        0
+    );
+    assert!(path.exists());
+    assert!(
+        !command(dir.path(), &["cleanup", "unexpected"], "")
+            .status
+            .success()
+    );
+}

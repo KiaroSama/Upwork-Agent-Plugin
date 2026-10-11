@@ -61,7 +61,7 @@ fn shared_skill_and_client_manifests_are_complete_without_direct_mcp() {
         .filter(|entry| entry.path().join("SKILL.md").exists())
         .count();
     assert_eq!(
-        folders, 1,
+        folders, 2,
         "New skills need a catalog entry and evaluation coverage"
     );
 }
@@ -74,12 +74,47 @@ fn reusable_evaluations_have_unique_ids_and_no_private_inputs() {
     .unwrap();
     assert_eq!(evals["skill_name"], "upwork-project-selection");
     let cases = evals["evals"].as_array().unwrap();
-    assert_eq!(cases.len(), 3);
+    assert_eq!(cases.len(), 4);
     let mut ids = std::collections::HashSet::new();
     for case in cases {
         assert!(ids.insert(case["id"].as_u64().unwrap()));
         assert!(case["prompt"].as_str().unwrap().len() > 100);
         assert!(case["expected_output"].as_str().unwrap().len() > 40);
         assert!(case["files"].as_array().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn profile_workflow_and_competition_are_packaged_with_approval_boundaries() {
+    let profile = include_str!("../skills/upwork-profile-management/SKILL.md");
+    assert!(profile.contains("name: upwork-profile-management"));
+    assert!(profile.contains("For a draft-only request, stop here"));
+    assert!(profile.contains("maximum 70 characters"));
+    assert!(profile.contains("at most 20"));
+    assert!(profile.contains("second approval"));
+    let competition = include_str!("../skills/upwork-project-selection/references/competition.md");
+    assert!(competition.contains("proposals_tier"));
+    assert!(competition.contains("never convert to an exact count"));
+    assert!(competition.contains("Limited samples, never complete totals"));
+    let evaluations: Value = serde_json::from_str(include_str!(
+        "../skills/upwork-profile-management/evals/evals.json"
+    ))
+    .unwrap();
+    assert_eq!(evaluations["skill_name"], "upwork-profile-management");
+    assert_eq!(evaluations["evals"].as_array().unwrap().len(), 2);
+    let allowlist: Value =
+        serde_json::from_str(include_str!("../scripts/release-files.json")).unwrap();
+    for file in [
+        "skills/upwork-profile-management/SKILL.md",
+        "skills/upwork-project-selection/references/competition.md",
+        "scripts/cleanup.ps1",
+    ] {
+        assert!(
+            allowlist["common"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|entry| entry == file)
+        );
     }
 }

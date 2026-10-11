@@ -57,9 +57,47 @@ async fn execute() -> Result<()> {
     upwork_connector::register::prepare_cache(&root)?;
     let command = args.first().map(String::as_str).unwrap_or("menu");
     let log = Log::new(&root, "upwork-native");
-    log.event("INFO", "Native executable started version=2.0.0.");
+    log.event("INFO", "Native executable started version=2.1.0.");
+    let cleanup_command = command == "cleanup";
+    let _maintenance = if cleanup_command {
+        Some(upwork_connector::cleanup::lease(&root, true)?)
+    } else {
+        if let Ok(_exclusive) = upwork_connector::cleanup::lease(&root, true) {
+            match upwork_connector::cleanup::sweep(&root, true, std::time::SystemTime::now()) {
+                Ok(report) if report.removed > 0 => {
+                    log.event("INFO", "Stale connector temporary files removed.")
+                }
+                Err(_) => log.event("WARNING", "Temporary cleanup skipped safely."),
+                _ => {}
+            }
+        }
+        let mut runtime = None;
+        for _ in 0..20 {
+            if let Ok(file) = upwork_connector::cleanup::lease(&root, false) {
+                runtime = Some(file);
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+        }
+        Some(runtime.ok_or(Error::Safe("Maintenance is busy. Retry after it finishes."))?)
+    };
     let path = root.join("config/connections.json");
     let result = match command {
+        "cleanup" => {
+            let apply = match args.get(1).map(String::as_str) {
+                None if args.len() == 1 => false,
+                Some("--apply") if args.len() == 2 => true,
+                _ => {
+                    return Err(Error::Safe(
+                        "Use cleanup or cleanup --apply; only stale connector-owned temporary files are eligible.",
+                    ));
+                }
+            };
+            let report =
+                upwork_connector::cleanup::sweep(&root, apply, std::time::SystemTime::now())?;
+            println!("{}", serde_json::to_string(&report)?);
+            Ok(())
+        }
         "bridge" => upwork_connector::bridge::run(&root, upwork_connector::ENDPOINT, false).await,
         "sign-in" => upwork_connector::bridge::run(&root, upwork_connector::ENDPOINT, true).await,
         "menu" => upwork_connector::menu::run(&root).await,
@@ -158,7 +196,7 @@ async fn execute() -> Result<()> {
             Ok(())
         }
         "--version" => {
-            println!("upwork-connector 2.0.0");
+            println!("upwork-connector 2.1.0");
             Ok(())
         }
         _ => Err(Error::Safe(

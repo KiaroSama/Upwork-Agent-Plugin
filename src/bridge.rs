@@ -126,7 +126,7 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         );
         let mut transport = transport;
         let message: ClientJsonRpcMessage = serde_json::from_value(
-            serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"upwork-native-sign-in","version":"2.0.0"}}}),
+            serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"upwork-native-sign-in","version":env!("CARGO_PKG_VERSION")}}}),
         )?;
         let verification = tokio::time::timeout(Duration::from_secs(30), async {
             let send = send_owned(&mut transport, message);

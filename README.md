@@ -40,10 +40,10 @@ Git or local compilation is needed.
 
 | Machine | Download |
 | --- | --- |
-| Windows x64 | [upwork-agent-plugin-2.0.0-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-windows-x64.zip) |
-| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.0.0-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-linux-x64.tar.gz) |
-| macOS Apple Silicon | [upwork-agent-plugin-2.0.0-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-macos-arm64.tar.gz) |
-| macOS Intel | [upwork-agent-plugin-2.0.0-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.0.0-macos-x64.tar.gz) |
+| Windows x64 | [upwork-agent-plugin-2.1.0-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.0-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.0-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.0-linux-x64.tar.gz) |
+| macOS Apple Silicon | [upwork-agent-plugin-2.1.0-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.0-macos-arm64.tar.gz) |
+| macOS Intel | [upwork-agent-plugin-2.1.0-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.0-macos-x64.tar.gz) |
 
 Each archive contains the executable in `bin/`, its launchers, skills plugin and GPL license.
 `release.json` records the version, platform and source commit; corresponding source is available at
@@ -53,19 +53,19 @@ Do not move only the executable or overwrite existing profiles, saved sessions, 
 Verify SHA256 before running. On Windows, from your downloads folder:
 
 ```bash
-powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.0.0-windows-x64.zip -Algorithm SHA256"
+powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.0-windows-x64.zip -Algorithm SHA256"
 ```
 
 Compare the displayed hash with the matching `.sha256` file. On Linux:
 
 ```bash
-sha256sum -c upwork-agent-plugin-2.0.0-linux-x64.tar.gz.sha256
+sha256sum -c upwork-agent-plugin-2.1.0-linux-x64.tar.gz.sha256
 ```
 
 On macOS Apple Silicon (use the x64 filename on Intel):
 
 ```bash
-shasum -a 256 -c upwork-agent-plugin-2.0.0-macos-arm64.tar.gz.sha256
+shasum -a 256 -c upwork-agent-plugin-2.1.0-macos-arm64.tar.gz.sha256
 ```
 
 Alternatively, download the platform artifact from a successful exact-commit
@@ -106,7 +106,7 @@ mkdir -m 700 upwork-agent-plugin
 ```
 
 ```bash
-tar -xzf upwork-agent-plugin-2.0.0-linux-x64.tar.gz -C upwork-agent-plugin
+tar -xzf upwork-agent-plugin-2.1.0-linux-x64.tar.gz -C upwork-agent-plugin
 ```
 
 Unix archives preserve executable permissions. The optional launcher needs `sh`, not PowerShell:
@@ -315,12 +315,12 @@ codex plugin marketplace add KiaroSama/Upwork-Agent-Plugin --ref main
 ```
 
 Restart the ChatGPT desktop app, open **Plugins Directory**, choose **upwork-agent-plugin-marketplace**
-and install **Upwork Project Selection**. Invoke `$upwork-project-selection`. Surface/version availability
+and install **Upwork Account Workflows**. Invoke `$upwork-project-selection`. Surface/version availability
 varies; this is not a universal `codex plugin install` command. Standalone copying also works.
 
 ### Install the Cursor skill
 
-Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.0.0.zip).
+Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.0.zip).
 Copy `skills/upwork-project-selection/` to the workspace's `.agents/skills/upwork-project-selection/`.
 Preserve existing files, keep only one discovery copy, reopen the workspace and invoke `/upwork-project-selection`.
 
@@ -337,6 +337,59 @@ and verification limits. Actual Claude validator and isolated marketplace instal
 Codex/Cursor/Antigravity checks are structural/current-documentation evidence, not native runtime proof.
 Three synthetic evaluation prompts are not proof of live marketplace success or statistical effectiveness.
 Official Upwork skills remain separate; no global installation, permission expansion or duplicate route is enabled automatically.
+
+## Profile management
+
+The new [upwork-profile-management](skills/upwork-profile-management/SKILL.md) skill adds a future workflow
+for title, biography, skills, employment, education, language and availability changes. Invoke
+`/upwork-agent-connector:upwork-profile-management` after installing/updating the plugin.
+It reads current profile evidence, preserves untouched fields, presents the complete proposed diff and
+requires explicit approval before creating a write preview, then a second approval before confirmation.
+Installation alone never drafts or edits your profile. Unknown experience or metrics are never invented.
+The hosted Upwork MCP already supplies these operations; the connector does not fabricate new APIs.
+
+Project selection now includes [competition and client-history evidence](skills/upwork-project-selection/references/competition.md):
+exact proposal counts only when exposed, otherwise ranges; posting activity separately from lifetime
+client hires/spend; sampled work history is not a total. Unavailable metrics remain unknown.
+
+## Safe maintenance
+
+Every native run attempts conservative cleanup of flat `.cache/tmp/upwork-<UUID>.tmp` files at least
+24 hours old. Unknown names, fresh files, links and locked files remain untouched. A nonblocking
+maintenance lease prevents automatic cleanup while another cooperating connector is active.
+No generic browser/host cache, account session, profile configuration, proxy input or operational log is deleted.
+
+Inspect eligible stale owned temporary files:
+
+```bash
+./bin/upwork-connector.exe cleanup
+```
+
+Apply only that temporary-file cleanup after closing active connectors:
+
+```bash
+./bin/upwork-connector.exe cleanup --apply
+```
+
+For project build caches and confirmed legacy software remnants, use the separate optional PowerShell7
+script. It defaults to a dry-run and refuses active connector/build/Node processes, linked paths or
+protected content inside targets. It never deletes the current `bin/` executable, `.state/`, `config/`,
+input files or `logs/`. Its allowlist covers `target/`, `.cargo-cache/`, `.ci-cache/`, `.ci-work/`,
+legacy `.runtime/`, `node_modules/`, `.cache/npm/` and the specifically named previous native binary.
+It is conservative: if an unrelated build process is active, cleanup also waits rather than guessing ownership.
+
+```bash
+pwsh -NoProfile -File ./scripts/cleanup.ps1
+```
+
+After reviewing the listed targets and closing relevant processes:
+
+```bash
+pwsh -NoProfile -File ./scripts/cleanup.ps1 -Apply
+```
+
+Maintenance logs use the same UTF-8 UTC format in `logs/`, with safe counts and no credential/file contents.
+Cleanup does not run continuously while Claude is closed; it runs at native startup or on explicit request.
 
 ## Logging
 

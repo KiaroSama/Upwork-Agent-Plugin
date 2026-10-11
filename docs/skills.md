@@ -6,6 +6,8 @@
 | --- | --- | --- |
 | [upwork-project-selection](../skills/upwork-project-selection/SKILL.md) | Choose worthwhile jobs before spending time or Connects | Pursue, Clarify, Pass or Stop for payment safety; three gates, evidence and next action |
 
+| [upwork-profile-management](../skills/upwork-profile-management/SKILL.md) | Prepare requested profile changes with evidence and approvals | Original/proposed diff, service preview, confirmation and read-back |
+
 Original English synthesis of the supplied two-page Persian article; ten risks, positive buying intent and three preproposal gates. Its reported 4,281 postings/15 years of experience are unverified observations, not a statistical model or official policy. The PDF is not distributed. GPL-3.0-only, like this project.
 
 The skill works with pasted job evidence or optional authorized MCP reads. It does not send messages, submit proposals or spend Connects without separate approval. Official Upwork skills and the native connector remain independent.
@@ -52,7 +54,7 @@ Add the marketplace source using the supported CLI:
 codex plugin marketplace add KiaroSama/Upwork-Agent-Plugin --ref main
 ```
 
-Restart the ChatGPT desktop app, open **Plugins Directory**, choose **upwork-agent-plugin-marketplace**, and install **Upwork Project Selection**. Invoke `$upwork-project-selection` in Codex. Current Codex supports this Claude-compatible catalog; root OpenAI metadata takes precedence over the `.codex-plugin` fallback. Local/plugin install availability varies by surface; CLI catalog setup is not an invented universal `codex plugin install` command.
+Restart the ChatGPT desktop app, open **Plugins Directory**, choose **upwork-agent-plugin-marketplace**, and install **Upwork Account Workflows**. Invoke `$upwork-project-selection` in Codex. Current Codex supports this Claude-compatible catalog; root OpenAI metadata takes precedence over the `.codex-plugin` fallback. Local/plugin install availability varies by surface; CLI catalog setup is not an invented universal `codex plugin install` command.
 
 Standalone skill copying below is also supported by Codex. See [current official plugin instructions](https://developers.openai.com/codex/plugins/build.md).
 
@@ -93,6 +95,10 @@ Reopen the workspace and invoke `/upwork-project-selection`, or ask to use the n
 | Cursor | Portable root / `.cursor-plugin` / `.agents/skills` | [Official format](https://cursor.com/docs/plugins/building) and structural checks; runtime not exercised |
 | Antigravity | `.agents/skills` discovery | [Official docs](https://antigravity.google/docs/skills) and portable skill checks; runtime not exercised |
 
-Other Agent Skills clients use their own documented discovery/import path. No global installation, config overwrite or permission expansion occurs automatically. Three synthetic evaluation prompts exercise good-fit/new-client, commercial unpaid work, and payment-bypass/prompt-injection decisions; they are not proof of live marketplace success or every host runtime.
+Other Agent Skills clients use their own documented discovery/import path. No global installation, config overwrite or permission expansion occurs automatically. Six synthetic evaluation prompts exercise good-fit/new-client, commercial unpaid work, and payment-bypass/prompt-injection decisions; they are not proof of live marketplace success or every host runtime.
 
 Example: “Assess this job before I spend Connects. Here is the listing and my relevant experience.” The assessment marks unknown facts honestly, balances positive intent against risk and gives one bounded next action.
+
+## Future profile changes
+
+Invoke `/upwork-agent-connector:upwork-profile-management` in Claude or `$upwork-profile-management` in Codex. Standalone clients copy its canonical directory using the same collision-safe method. This feature does not change your account when installed. A draft-only request stops before write-capable tools; publication needs exact proposal approval, then service-preview approval and read-back. Job selection also distinguishes proposal ranges from exact counts and posting activity from client lifetime history.

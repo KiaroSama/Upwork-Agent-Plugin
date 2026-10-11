@@ -1,0 +1,4 @@
+interface:
+  display_name: "Upwork Profile Management"
+  short_description: "Prepare accurate profile changes with explicit approval"
+  default_prompt: "Use $upwork-profile-management to prepare the profile changes I request without publishing until I approve."

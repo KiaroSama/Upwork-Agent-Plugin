@@ -11,8 +11,20 @@
     ".cursor-plugin/plugin.json",
     "skills/upwork-project-selection/SKILL.md",
     "skills/upwork-project-selection/agents/openai.yaml",
-    "skills/upwork-project-selection/evals/evals.json"
+    "skills/upwork-project-selection/evals/evals.json",
+    "skills/upwork-project-selection/references/competition.md",
+    "skills/upwork-profile-management/SKILL.md",
+    "skills/upwork-profile-management/agents/openai.yaml",
+    "skills/upwork-profile-management/evals/evals.json",
+    "scripts/cleanup.ps1"
   ],
-  "windows": ["run.ps1", "scripts/protect-state.ps1", "config/connections.example.json"],
-  "unix": ["run.sh", "config/connections.example.json"]
+  "windows": [
+    "run.ps1",
+    "scripts/protect-state.ps1",
+    "config/connections.example.json"
+  ],
+  "unix": [
+    "run.sh",
+    "config/connections.example.json"
+  ]
 }

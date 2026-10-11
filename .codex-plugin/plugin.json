@@ -1,7 +1,7 @@
 {
   "name": "upwork-agent-connector",
-  "version": "2.0.0",
-  "description": "Evidence-based Upwork project selection with a separately configured native fail-closed MCP connector.",
+  "version": "2.1.0",
+  "description": "Evidence-based Upwork job assessment and approved profile workflows with a separate native fail-closed connector.",
   "author": {
     "name": "KiaroSama"
   },
@@ -16,9 +16,9 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Upwork Project Selection",
-    "shortDescription": "Choose worthwhile Upwork jobs before applying",
-    "longDescription": "Assess client buying intent, proven freelancer fit and contract value with evidence-based, read-only triage.",
+    "displayName": "Upwork Account Workflows",
+    "shortDescription": "Assess jobs and prepare approved profile changes",
+    "longDescription": "Evidence-based job competition/client analysis and user-approved profile management, with a separate native fail-closed connector.",
     "developerName": "KiaroSama",
     "category": "Productivity",
     "capabilities": [
@@ -26,7 +26,8 @@
     ],
     "websiteURL": "https://github.com/KiaroSama/Upwork-Agent-Plugin",
     "defaultPrompt": [
-      "Assess this Upwork job before I spend Connects."
+      "Assess this Upwork job before I spend Connects.",
+      "Prepare only the Upwork profile changes I request; do not publish without approval."
     ],
     "brandColor": "#236A70"
   }

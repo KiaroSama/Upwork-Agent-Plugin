@@ -16,6 +16,8 @@ Identify the business outcome, deliverables, budget/rate and currency, schedule,
 
 Completion: enough evidence to assess the three gates below, or an explicit list of missing decision-changing facts. Do not request unrelated financial/account data.
 
+For competition, proposal ranges, posting activity and client hiring/spend history, follow [Competition and client evidence](references/competition.md). Keep posting-level activity separate from lifetime client history; read current job details before inferring hiring progress.
+
 ## 2. Assess buying intent and contract risk
 
 Review all ten signals; surface only relevant observations and unknowns in the answer.

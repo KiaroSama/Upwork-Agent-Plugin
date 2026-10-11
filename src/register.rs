@@ -15,6 +15,13 @@ fn same_path(left: &Path, right: &Path) -> bool {
 pub fn prepare_cache(root: &Path) -> Result<()> {
     let cache = root.join(".cache");
     let temp = cache.join("tmp");
+    for path in [&cache, &temp] {
+        if let Ok(meta) = std::fs::symlink_metadata(path)
+            && (crate::cleanup::linked(&meta) || !meta.is_dir())
+        {
+            return Err(Error::Safe("Linked or invalid cache directory refused."));
+        }
+    }
     std::fs::create_dir_all(&temp)?;
     #[cfg(unix)]
     {
