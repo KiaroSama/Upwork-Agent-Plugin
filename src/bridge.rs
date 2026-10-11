@@ -31,7 +31,11 @@ async fn read_bounded<R: tokio::io::AsyncRead + Unpin>(
     loop {
         let buffer = input.fill_buf().await?;
         if buffer.is_empty() {
-            return Ok(0);
+            return if line.is_empty() {
+                Ok(0)
+            } else {
+                Err(Error::Safe("MCP input ended before its newline delimiter."))
+            };
         }
         let count = buffer
             .iter()
@@ -69,11 +73,10 @@ where
     let mut input = BufReader::new(input);
     let mut line = Vec::new();
     let mut sends = FuturesUnordered::new();
-    let result=async {
+    let result = route.guard(async {
         loop {
             tokio::select! {
                 biased;
-                _=route.changed()=>return Err(Error::Safe("Route changed. Reconnect upwork-local to apply the new selection.")),
                 count=read_bounded(&mut input,&mut line), if sends.len()<16=>{
                     if count?==0 {return Ok(());}
                     let message:ClientJsonRpcMessage=serde_json::from_slice(&line)?;
@@ -90,7 +93,7 @@ where
                 }
             }
         }
-    }.await;
+    }).await.and_then(|result| result);
     drop(sends);
     let _ = tokio::time::timeout(Duration::from_secs(2), remote.close()).await;
     result

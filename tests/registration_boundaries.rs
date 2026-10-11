@@ -120,3 +120,98 @@ fn registration_refuses_linked_settings_directory_without_external_writes() {
     assert_eq!(fs::read(root.join(".mcp.json")).unwrap(), before);
     assert_eq!(fs::read_dir(external).unwrap().count(), 0);
 }
+
+#[test]
+fn retired_legacy_paths_and_installed_native_entries_are_recognized_safely() {
+    for legacy in [true, false] {
+        let dir = temp();
+        let root = fs::canonicalize(dir.path()).unwrap();
+        let old = if legacy {
+            json!({"command":"node","args":[root.join("src/bridge.ts")]})
+        } else {
+            json!({"command":root.join("bin/upwork-connector.exe"),"args":["bridge"]})
+        };
+        write_json(
+            &root.join(".mcp.json"),
+            &json!({"mcpServers":{"upwork-local":old}}),
+        );
+        register::register(&root).unwrap();
+        register::register(&root).unwrap();
+    }
+}
+
+#[test]
+fn same_executable_does_not_authorize_other_commands_or_transport_types() {
+    for old in [
+        json!({"command":std::env::current_exe().unwrap(),"args":["menu"]}),
+        json!({"command":std::env::current_exe().unwrap(),"args":["bridge"]}),
+        json!({"command":std::env::current_exe().unwrap(),"type":"http","args":[]}),
+        json!({"command":std::env::current_exe().unwrap(),"args":"bridge"}),
+    ] {
+        let dir = temp();
+        let root = fs::canonicalize(dir.path()).unwrap();
+        let path = root.join(".mcp.json");
+        write_json(&path, &json!({"mcpServers":{"upwork-local":old}}));
+        let before = fs::read(&path).unwrap();
+        assert!(register::register(&root).is_err());
+        assert_eq!(fs::read(path).unwrap(), before);
+    }
+}
+
+#[test]
+fn registration_respects_a_live_writer_lock_without_partial_publication() {
+    let dir = temp();
+    let root = fs::canonicalize(dir.path()).unwrap();
+    let path = root.join(".mcp.json");
+    let guard = upwork_connector::storage::Lock::acquire(&path).unwrap();
+    assert!(register::register(&root).is_err());
+    assert!(!path.exists());
+    assert!(!root.join(".claude/settings.local.json").exists());
+    drop(guard);
+    register::register(&root).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn linked_registration_files_are_rejected_and_external_bytes_are_preserved() {
+    for name in [".mcp.json", ".claude/settings.local.json"] {
+        let dir = temp();
+        let outside = temp();
+        let root = fs::canonicalize(dir.path()).unwrap();
+        let target = fs::canonicalize(outside.path())
+            .unwrap()
+            .join("external.json");
+        fs::write(&target, b"{}").unwrap();
+        let path = root.join(name);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::os::unix::fs::symlink(&target, &path).unwrap();
+        assert!(register::register(&root).is_err());
+        assert_eq!(fs::read(target).unwrap(), b"{}");
+        assert!(fs::symlink_metadata(path).unwrap().file_type().is_symlink());
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn windows_junction_settings_directory_is_rejected_without_external_writes() {
+    let dir = temp();
+    let outside = temp();
+    let root = fs::canonicalize(dir.path()).unwrap();
+    let external = fs::canonicalize(outside.path()).unwrap();
+    let link = root.join(".claude");
+    let output = std::process::Command::new("cmd.exe")
+        .args(["/D", "/C", "mklink", "/J"])
+        .arg(&link)
+        .arg(&external)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "Cannot create the junction fixture"
+    );
+    let result = register::register(&root);
+    fs::remove_dir(&link).unwrap();
+    assert!(result.is_err());
+    assert!(!root.join(".mcp.json").exists());
+    assert_eq!(fs::read_dir(external).unwrap().count(), 0);
+}

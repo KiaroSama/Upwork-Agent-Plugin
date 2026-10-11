@@ -34,43 +34,42 @@ impl OAuthHttpClient for OAuthRoute {
     fn execute(&self, operation: OAuthHttpRequest) -> OAuthHttpClientFuture<'_> {
         Box::pin(async move {
             self.route
-                .check()
-                .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
-            let client = if operation.redirect_policy == OAuthHttpRedirectPolicy::Stop {
-                &self.stop
-            } else {
-                &self.follow
-            };
-            let request = reqwest::Request::try_from(operation.request)
-                .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
-            let result=tokio::select! {
-                _=self.route.changed()=>return Err(Box::new(Error::Safe("Route changed; OAuth stopped.")) as OAuthHttpClientError),
-                result=client.execute(request)=>result,
-            }.map_err(|e|Box::new(e) as OAuthHttpClientError)?;
-            let mut response = http::Response::builder()
-                .status(result.status())
-                .version(result.version());
-            for (name, value) in result.headers() {
-                response = response.header(name, value);
-            }
-            let mut result = result;
-            let mut body = Vec::new();
-            while let Some(chunk) = result
-                .chunk()
+                .guard(async {
+                    let client = if operation.redirect_policy == OAuthHttpRedirectPolicy::Stop {
+                        &self.stop
+                    } else {
+                        &self.follow
+                    };
+                    let request = reqwest::Request::try_from(operation.request)
+                        .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
+                    let mut result = client
+                        .execute(request)
+                        .await
+                        .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
+                    let mut response = http::Response::builder()
+                        .status(result.status())
+                        .version(result.version());
+                    for (name, value) in result.headers() {
+                        response = response.header(name, value);
+                    }
+                    let mut body = Vec::new();
+                    while let Some(chunk) = result
+                        .chunk()
+                        .await
+                        .map_err(|e| Box::new(e) as OAuthHttpClientError)?
+                    {
+                        if chunk.len() > 1024 * 1024 - body.len() {
+                            return Err(Box::new(Error::Safe("OAuth response too large."))
+                                as OAuthHttpClientError);
+                        }
+                        body.extend_from_slice(&chunk);
+                    }
+                    response
+                        .body(body)
+                        .map_err(|e| Box::new(e) as OAuthHttpClientError)
+                })
                 .await
                 .map_err(|e| Box::new(e) as OAuthHttpClientError)?
-            {
-                if body.len() + chunk.len() > 1024 * 1024 {
-                    return Err(Box::new(Error::Safe("OAuth response too large.")));
-                }
-                body.extend_from_slice(&chunk);
-            }
-            self.route
-                .check()
-                .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
-            response
-                .body(body)
-                .map_err(|e| Box::new(e) as OAuthHttpClientError)
         })
     }
 }

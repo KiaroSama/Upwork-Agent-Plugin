@@ -50,3 +50,7 @@ Thumbs.db
 !/.env.sample
 !/.env.template
 !/.env.dist
+
+# Persistent OS-lock files contain no state and must never be published.
+/config/*.json.lock
+/.mcp.json.lock

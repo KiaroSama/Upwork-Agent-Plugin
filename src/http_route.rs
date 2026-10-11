@@ -32,10 +32,7 @@ impl McpRoute {
                 "Route changed; MCP operation blocked.",
             ))
         };
-        self.route.check().map_err(|_| changed())?;
-        let result = tokio::select! {biased;_=self.route.changed()=>return Err(changed()),result=future=>result};
-        self.route.check().map_err(|_| changed())?;
-        result
+        self.route.guard(future).await.map_err(|_| changed())?
     }
 }
 impl StreamableHttpClient for McpRoute {

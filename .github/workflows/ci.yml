@@ -98,6 +98,18 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+      - name: Preserve bounded verification evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: verification-${{ matrix.platform }}
+          path: |
+            target/nextest/ci/junit.xml
+            .ci-work/rust-verification.json
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
   audit:
     name: Rust dependency audit
     runs-on: ubuntu-latest

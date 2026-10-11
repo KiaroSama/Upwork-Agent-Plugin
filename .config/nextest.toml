@@ -9,3 +9,10 @@ retries = 0
 global-timeout = "120s"
 test-threads = 2
 slow-timeout = { period = "15s", terminate-after = 1, grace-period = "2s" }
+
+[profile.ci.junit]
+path = "junit.xml"
+report-name = "upwork-regressions"
+store-success-output = false
+store-failure-output = false
+report-skipped = "all"
