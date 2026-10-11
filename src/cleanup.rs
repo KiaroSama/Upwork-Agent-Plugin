@@ -57,7 +57,7 @@ pub fn lease(root: &Path, exclusive: bool) -> Result<File> {
 
 pub fn sweep(root: &Path, apply: bool, now: SystemTime) -> Result<Report> {
     let temp = root.join(".cache/tmp");
-    if linked(&fs::symlink_metadata(&root.join(".cache"))?) || linked(&fs::symlink_metadata(&temp)?)
+    if linked(&fs::symlink_metadata(root.join(".cache"))?) || linked(&fs::symlink_metadata(&temp)?)
     {
         return Err(Error::Safe("Linked temporary directory refused."));
     }
