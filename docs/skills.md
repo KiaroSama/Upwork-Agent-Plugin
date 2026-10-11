@@ -1,6 +1,6 @@
-# Skills and client installation
+# Project-selection guidance
 
-## Catalog and provenance
+## Overview
 
 | Skill | Purpose | Output |
 | --- | --- | --- |
@@ -10,13 +10,13 @@ Original English synthesis of the supplied two-page Persian article; ten risks, 
 
 The skill works with pasted job evidence or optional authorized MCP reads. It does not send messages, submit proposals or spend Connects without separate approval. Official Upwork skills and the native connector remain independent.
 
-## Package layout
+## Installation
 
 One canonical `skills/` tree serves all clients. The portable root `plugin.json` follows [Agent Plugins](https://agent-plugins.org/plugin-authors/manifest), with OpenAI presentation under `extensions.com.openai.interface`. Claude, Codex and Cursor compatibility manifests reference the same tree. `.claude-plugin/marketplace.json` provides the install catalog, declared as `upwork-agent-plugin-marketplace`; the plugin is `upwork-agent-connector`.
 
 Download the skills-only ZIP from [Releases](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest) if you do not need the native connector. Packages contain no saved proxies, account credentials or direct hosted MCP declaration.
 
-## Claude Code
+### Install the Claude Code plugin
 
 Register the repository marketplace:
 
@@ -44,7 +44,7 @@ claude --plugin-dir /path/to/extracted-plugin
 
 Installing instructions does not build the executable or register MCP. Native registration is a separate menu operation.
 
-## Codex
+### Install the Codex plugin
 
 Add the marketplace source using the supported CLI:
 
@@ -56,7 +56,7 @@ Restart the ChatGPT desktop app, open **Plugins Directory**, choose **upwork-age
 
 Standalone skill copying below is also supported by Codex. See [current official plugin instructions](https://developers.openai.com/codex/plugins/build.md).
 
-## Cursor and Antigravity
+### Install the Cursor skill
 
 Download/extract the skills-only ZIP or a platform bundle. Copy the complete `skills/upwork-project-selection/` directory into your workspace's `.agents/skills/upwork-project-selection/`. Use a real copy, not a symlink. Inspect an existing destination before replacement; keep only one copy in scanned directories.
 
@@ -76,9 +76,15 @@ On Windows, substitute your workspace path; this command refuses an existing des
 $destination = 'D:\YourWorkspace\.agents\skills\upwork-project-selection'; if (Test-Path -LiteralPath $destination) { throw 'Skill already exists; review it before replacement.' }; New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null; Copy-Item -LiteralPath './skills/upwork-project-selection' -Destination $destination -Recurse
 ```
 
+### Install the Antigravity skill
+
+Antigravity uses the same canonical `skills/upwork-project-selection/` payload and workspace
+`.agents/skills/upwork-project-selection/` destination. Follow the collision-safe copy commands above;
+keep one discovery copy. This is standalone skill installation, not native plugin installation.
+
 Reopen the workspace and invoke `/upwork-project-selection`, or ask to use the named skill. Cursor also supports portable root and `.cursor-plugin` packages through its available plugin import interface; native workspace discovery is the documented fallback. Antigravity IDE, 2.0 and CLI use `.agents/skills`; older `.agent/skills` is compatibility only.
 
-## Support and verification
+### Installation boundaries
 
 | Host | Contract | Verification limit |
 | --- | --- | --- |
