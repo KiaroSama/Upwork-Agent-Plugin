@@ -27,10 +27,17 @@ pub fn prepare_cache(root: &Path) -> Result<()> {
 }
 pub fn desktop(root: &Path) -> Result<Value> {
     let executable = env::current_exe()?;
+    let args = if executable.parent().is_some_and(|parent| {
+        parent.file_name().is_some_and(|name| name == "bin") && same_path(parent, &root.join("bin"))
+    }) {
+        json!(["bridge"])
+    } else {
+        json!(["--root", root, "bridge"])
+    };
     let temp = root.join(".cache/tmp");
     let cache = root.join(".cache");
     Ok(json!({"mcpServers":{"upwork-local":{
-        "command":executable,"args":["--root",root,"bridge"],
+        "command":executable,"args":args,
         "env":{"TEMP":temp,"TMP":temp,"TMPDIR":temp,"XDG_CACHE_HOME":cache}
     }}}))
 }

@@ -101,12 +101,12 @@ The same stdio executable works with MCP hosts on Linux; a particular host appli
 Generate the exact configuration for your executable and folder:
 
 ```powershell
-./bin/upwork-connector.exe --root . desktop-config
+./bin/upwork-connector.exe desktop-config
 ```
 
-Merge the printed `mcpServers.upwork-local` object into `claude_desktop_config.json` without removing other servers, then restart Desktop. The `command` points directly to the native executable, and `args` explicitly bind state to this folder; do not replace it with `cargo run`, Node or a hosted HTTP entry.
+Merge the printed `mcpServers.upwork-local` object into `claude_desktop_config.json` without removing other servers, then restart Desktop. The `command` points directly to the native executable, and standard `bin/` installations use `args: ["bridge"]`. Desktop starts and owns the stdio process automatically; you do not need to open or keep the launcher running. The executable resolves its installation folder from its own location, independent of Desktop's working directory. Use the menu only for initial sign-in or changing settings; do not replace it with `cargo run`, Node or a hosted HTTP entry.
 
-`--root` binds connector state, not the operating system's temporary-directory environment. Generated Desktop and project registration entries also include `env.TEMP`, `env.TMP` and `env.TMPDIR` pointing to `<installation>/.cache/tmp`, plus `env.XDG_CACHE_HOME` pointing to `<installation>/.cache`. The executable creates these private directories; the launchers apply the same per-process environment. The connector has no persistent HTTP response cache. Its profiles, account state and logs remain under the installation folder; atomic write scratch files stay beside their destination. This does not relocate Claude Desktop's own model/cache files or the separate browser's data.
+An explicit `--root` override remains available for developer/nonstandard layouts; generated entries retain it when needed to preserve that root. It binds connector state, not the operating system's temporary-directory environment. Generated Desktop and project registration entries also include `env.TEMP`, `env.TMP` and `env.TMPDIR` pointing to `<installation>/.cache/tmp`, plus `env.XDG_CACHE_HOME` pointing to `<installation>/.cache`. The executable creates these private directories; the launchers apply the same per-process environment. The connector has no persistent HTTP response cache. Its profiles, account state and logs remain under the installation folder; atomic write scratch files stay beside their destination. This does not relocate Claude Desktop's own model/cache files or the separate browser's data.
 
 Registration only edits Claude Code's project configuration. Its direct-Upwork denial does **not** apply to separate Desktop or claude.ai connectors. Disable duplicate direct Upwork connectors in that host yourself if you require routed-only access. Optional official Upwork skills can remain installed; they are not bundled here.
 

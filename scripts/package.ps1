@@ -24,7 +24,10 @@ function Smoke([string]$binary, [string[]]$arguments, [int]$expected) {
     $info.RedirectStandardInput = $true
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
-    foreach ($arg in (@('--root', $verify) + $arguments)) { $info.ArgumentList.Add($arg) }
+    $info.WorkingDirectory = $work
+    foreach ($key in @('TEMP', 'TMP', 'TMPDIR')) { $info.Environment[$key] = Join-Path $verify '.cache/tmp' }
+    $info.Environment['XDG_CACHE_HOME'] = Join-Path $verify '.cache'
+    foreach ($arg in $arguments) { $info.ArgumentList.Add($arg) }
     $child = [Diagnostics.Process]::new()
     $child.StartInfo = $info
     try {
@@ -99,6 +102,12 @@ try {
     $actual = @(Get-ChildItem -LiteralPath $verify -Recurse -Force -File | ForEach-Object { [IO.Path]::GetRelativePath($verify, $_.FullName).Replace('\', '/') })
     if (Compare-Object ($allowed + @('release.json') | Sort-Object) ($actual | Sort-Object)) { throw 'Extracted archive differs from the release allowlist.' }
     $binary = Join-Path $verify "bin/$binaryName"
+    $entry = (Smoke $binary @('desktop-config') 0 | ConvertFrom-Json).mcpServers.'upwork-local'
+    if ($entry.args.Count -ne 1 -or $entry.args[0] -ne 'bridge' -or $entry.command.Replace('\\?\', '') -ne $binary) { throw 'Packaged host configuration requires a launcher or wrong executable.' }
+    foreach ($key in @('TEMP', 'TMP', 'TMPDIR')) {
+        if ($entry.env.$key.Replace('\\?\', '') -ne (Join-Path $verify '.cache/tmp')) { throw 'Packaged host temporary path escaped the installation.' }
+    }
+    if ($entry.env.XDG_CACHE_HOME.Replace('\\?\', '') -ne (Join-Path $verify '.cache') -or -not (Test-Path -LiteralPath (Join-Path $verify '.cache/tmp') -PathType Container)) { throw 'Packaged cache root mismatch.' }
     if ((Smoke $binary @('--version') 0).Trim() -ne "upwork-connector $version") { throw 'Packaged version mismatch.' }
     $status = Smoke $binary @('status') 0 | ConvertFrom-Json
     if ($status.mode -ne 'blocked' -or $null -ne $status.selected -or $status.profiles.Count -ne 0) { throw 'Archive does not start with clean blocked state.' }
