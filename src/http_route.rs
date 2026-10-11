@@ -1,10 +1,12 @@
 use crate::route::Route;
-use futures::stream::BoxStream;
 use http::{HeaderName, HeaderValue};
 use rmcp::{
     model::ClientJsonRpcMessage,
-    transport::streamable_http_client::{
-        SseError, StreamableHttpClient, StreamableHttpError, StreamableHttpPostResponse,
+    transport::{
+        common::client_side_sse::BoxedSseResponse,
+        streamable_http_client::{
+            StreamableHttpClient, StreamableHttpError, StreamableHttpPostResponse,
+        },
     },
 };
 use std::{borrow::Cow, collections::HashMap, sync::Arc};
@@ -84,10 +86,7 @@ impl StreamableHttpClient for McpRoute {
         last: Option<String>,
         auth: Option<String>,
         headers: HashMap<HeaderName, HeaderValue>,
-    ) -> Result<
-        BoxStream<'static, Result<sse_stream::Sse, SseError>>,
-        StreamableHttpError<Self::Error>,
-    > {
+    ) -> Result<BoxedSseResponse, StreamableHttpError<Self::Error>> {
         self.guarded(self.client.get_stream(uri, session, last, auth, headers))
             .await
     }
@@ -99,10 +98,7 @@ impl StreamableHttpClient for McpRoute {
         auth: Option<String>,
         headers: HashMap<HeaderName, HeaderValue>,
         max: usize,
-    ) -> Result<
-        BoxStream<'static, Result<sse_stream::Sse, SseError>>,
-        StreamableHttpError<Self::Error>,
-    > {
+    ) -> Result<BoxedSseResponse, StreamableHttpError<Self::Error>> {
         self.guarded(
             self.client
                 .get_stream_with_max_sse_event_size(uri, session, last, auth, headers, max),
