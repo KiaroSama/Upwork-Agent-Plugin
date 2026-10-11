@@ -39,7 +39,14 @@ impl Lock {
             Err(TryLockError::Error(error)) => Err(error.into()),
         }
         // Keep the lock inode. Unlinking it lets waiters lock different inodes.
-        // The OS releases the lock when this handle closes, including after process death.
+        // The OS reclaims ownership when the final underlying handle closes.
+    }
+}
+impl Drop for Lock {
+    fn drop(&mut self) {
+        // A concurrent fork can retain this open file description until exec.
+        // Explicit unlock releases ownership even before that inherited handle closes.
+        let _ = self._file.unlock();
     }
 }
 fn private_options() -> OpenOptions {
@@ -74,4 +81,26 @@ pub fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
         let _ = fs::remove_file(&temp);
     }
     result
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn guard_release_unlocks_a_file_description_retained_by_an_inherited_handle() {
+        fs::create_dir_all(".ci-work").unwrap();
+        let dir = tempfile::tempdir_in(".ci-work").unwrap();
+        let path = dir.path().join("config.json");
+        let guard = Lock::acquire(&path).unwrap();
+        // A fork or duplicated descriptor retains the same open file description.
+        let inherited = guard._file.try_clone().unwrap();
+        drop(guard);
+        let replacement = Lock::acquire(&path)
+            .expect("Releasing the guard must unlock even while an inherited handle is alive");
+        drop(inherited);
+        assert!(Lock::acquire(&path).is_err());
+        drop(replacement);
+        assert!(Lock::acquire(&path).is_ok());
+    }
 }
