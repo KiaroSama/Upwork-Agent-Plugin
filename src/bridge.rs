@@ -54,28 +54,6 @@ async fn read_bounded<R: tokio::io::AsyncRead + Unpin>(
     }
 }
 
-#[cfg(test)]
-mod framing_tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn truncated_frame_errors_but_complete_frame_then_eof_is_clean() {
-        let mut line = Vec::new();
-        let mut truncated = BufReader::new(&b"{\"jsonrpc\":\"2.0\"}"[..]);
-        let error = read_bounded(&mut truncated, &mut line).await.unwrap_err();
-        assert!(matches!(
-            error,
-            Error::Safe("MCP input ended before its newline delimiter.")
-        ));
-        line.clear();
-        let mut complete = BufReader::new(&b"{}\n"[..]);
-        assert_eq!(read_bounded(&mut complete, &mut line).await.unwrap(), 3);
-        assert_eq!(line, b"{}\n");
-        line.clear();
-        assert_eq!(read_bounded(&mut complete, &mut line).await.unwrap(), 0);
-    }
-}
-
 pub async fn relay<C, R, W>(
     client: C,
     route: Route,
@@ -203,4 +181,26 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         "Native connector stopped; no direct fallback.",
     );
     result
+}
+
+#[cfg(test)]
+mod framing_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn truncated_frame_errors_but_complete_frame_then_eof_is_clean() {
+        let mut line = Vec::new();
+        let mut truncated = BufReader::new(&b"{\"jsonrpc\":\"2.0\"}"[..]);
+        let error = read_bounded(&mut truncated, &mut line).await.unwrap_err();
+        assert!(matches!(
+            error,
+            Error::Safe("MCP input ended before its newline delimiter.")
+        ));
+        line.clear();
+        let mut complete = BufReader::new(&b"{}\n"[..]);
+        assert_eq!(read_bounded(&mut complete, &mut line).await.unwrap(), 3);
+        assert_eq!(line, b"{}\n");
+        line.clear();
+        assert_eq!(read_bounded(&mut complete, &mut line).await.unwrap(), 0);
+    }
 }
