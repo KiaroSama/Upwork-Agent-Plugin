@@ -12,7 +12,9 @@ pub fn auth(error: &AuthError) -> &'static str {
     }
 }
 
-pub fn transport<E>(error: &StreamableHttpError<E>) -> &'static str {
+pub fn transport<E: std::error::Error + Send + Sync + 'static>(
+    error: &StreamableHttpError<E>,
+) -> &'static str {
     match error {
         StreamableHttpError::ControlRequestTimeout => "control_post_timeout",
         StreamableHttpError::SessionExpired => "session_expired",
