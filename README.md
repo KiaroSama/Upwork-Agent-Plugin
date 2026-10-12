@@ -194,7 +194,10 @@ A failed proxy causes an error, **never direct/alternate fallback**. Environment
 `NO_PROXY` cannot bypass the explicit route.
 
 A route change invalidates the old connection when the watcher observes it (100 ms interval); new
-requests also check selection. Interrupted work is not replayed automatically. Reconnect the MCP host.
+requests also check selection. Valid label and inactive-profile edits do not change the effective route.
+Observed invalidation permanently revokes the old connection and its clones, even if settings are restored.
+Cancellation covers stalled protocol output and OAuth response bodies; SDK shutdown is separately bounded
+to two seconds. Interrupted work or partial protocol output is not replayed automatically. Reconnect the MCP host.
 An authorization-server mismatch fails closed without deleting the original session.
 
 Proxy-side DNS prevents local destination lookups, but cannot guarantee a resolver in the proxy exit's
@@ -226,6 +229,14 @@ Atomic-write scratch files stay beside their destination. Downloaded runtime bun
 Build/verification scripts confine temporary files, Cargo downloads and compiler output to this project;
 CI also contains its downloaded toolchain and installer/advisory caches inside its checkout.
 Existing shared tools are not moved or deleted.
+
+State writers use persistent OS-lock files: file existence alone does not mean a writer is active.
+Locks are released on guard destruction or process termination; do not delete coordination files while
+processes run. When upgrading from the earlier sentinel-lock implementation, stop every old connector,
+menu and bridge for this installation before replacing the executable. Preserve sessions and profiles.
+Project registration refuses foreign roots, malformed configuration and linked destinations; handled
+publication failures restore original bytes only when no intervening settings edit occurred. This is
+not a crash-atomic transaction across both configuration files. See the [audit notes](docs/audits/2026-10-12.md).
 
 These paths do not relocate Claude Desktop's own application caches, other MCP servers' files or the
 separate browser's data. Preserve profiles, saved sessions, input files and operational logs during cleanup.

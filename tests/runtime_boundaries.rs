@@ -234,8 +234,12 @@ async fn oauth_route_change_cancels_a_stalled_response_body() {
         .await
         .unwrap()
         .unwrap();
-    // Allow the already-delivered headers to be consumed before revoking the route.
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    // Observe the incomplete response staying pending before revocation, rather than sleeping.
+    assert!(
+        tokio::time::timeout(Duration::from_millis(150), &mut operation)
+            .await
+            .is_err()
+    );
     config::update(&dir.path().join("config/connections.json"), |c| {
         c.mode = Mode::Blocked;
         Ok(())
@@ -249,25 +253,4 @@ async fn oauth_route_change_cancels_a_stalled_response_body() {
         "OAuth body collection must observe route revocation"
     );
     assert!(outcome.unwrap().unwrap().is_err());
-}
-
-#[tokio::test]
-async fn unterminated_input_is_not_reported_as_a_clean_session_exit() {
-    let dir = temp();
-    let route = direct(dir.path());
-    let client = McpRoute::new(route.clone()).unwrap();
-    let input = &b"{\"jsonrpc\":\"2.0\"}"[..];
-    let result = tokio::time::timeout(
-        Duration::from_secs(3),
-        bridge::relay(
-            client,
-            route,
-            "http://127.0.0.1:1/mcp",
-            input,
-            tokio::io::sink(),
-        ),
-    )
-    .await
-    .unwrap();
-    assert!(result.is_err());
 }

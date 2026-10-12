@@ -194,11 +194,13 @@ fn publish_pair(
     publish_mcp: impl FnOnce() -> Result<()>,
 ) -> Result<()> {
     // Publish the direct-route denial first. A crash cannot install the connector before its denial.
-    storage::atomic_json(settings_path, settings)?;
+    let mut published = serde_json::to_vec_pretty(settings)?;
+    published.push(b'\n');
+    storage::atomic_bytes(settings_path, &published)?;
     if let Err(error) = publish_mcp() {
-        // Restore original bytes only while the settings still equal our own publication.
+        // Equivalent JSON can still be an intervening edit; compare our exact bytes.
         let current = snapshot(settings_path)?;
-        if object(&current)? != *settings {
+        if current.as_deref() != Some(published.as_slice()) {
             return Err(Error::Safe(
                 "MCP registration failed and settings changed concurrently; review both files.",
             ));
@@ -238,6 +240,22 @@ mod tests {
             assert!(result.is_err());
             assert_eq!(snapshot(&path).unwrap(), original);
         }
+    }
+
+    #[test]
+    fn rollback_preserves_a_concurrent_equivalent_json_edit() {
+        fs::create_dir_all(".ci-work").unwrap();
+        let dir = tempfile::tempdir_in(".ci-work").unwrap();
+        let path = dir.path().join("settings.json");
+        let concurrent = b"{ \"deniedMcpServers\": [] }\n";
+        let result = publish_pair(&path, &json!({"deniedMcpServers":[]}), &None, || {
+            fs::write(&path, concurrent).unwrap();
+            Err(Error::Safe(
+                "Injected failure after an equivalent settings edit.",
+            ))
+        });
+        assert!(result.is_err());
+        assert_eq!(fs::read(path).unwrap(), concurrent);
     }
 
     #[test]

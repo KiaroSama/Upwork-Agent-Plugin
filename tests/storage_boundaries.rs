@@ -17,22 +17,33 @@ fn temp() -> tempfile::TempDir {
 fn abrupt_exit_releases_the_operating_system_lock() {
     let dir = temp();
     let path = fs::canonicalize(dir.path()).unwrap().join("config.json");
-    let mut child = Command::new(std::env::current_exe().unwrap())
+    let mut command = Command::new(std::env::current_exe().unwrap());
+    command
         .args(["--exact", "crash_lock_child", "--nocapture"])
         .env("UPWORK_AUDIT_LOCK_PATH", &path)
-        .spawn()
-        .unwrap();
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let mut child = command.spawn().unwrap();
     let start = Instant::now();
     let status = loop {
-        if let Some(status) = child.try_wait().unwrap() {
-            break status;
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if start.elapsed() <= Duration::from_secs(3) => {
+                // std::process has no timed wait; bounded polling matches the CLI fixture.
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            result => {
+                let _ = child.kill();
+                child.wait().unwrap();
+                panic!("Crash fixture wait failed or exceeded its deadline: {result:?}");
+            }
         }
-        if start.elapsed() > Duration::from_secs(3) {
-            child.kill().unwrap();
-            child.wait().unwrap();
-            panic!("Crash fixture exceeded its deadline");
-        }
-        std::thread::sleep(Duration::from_millis(10));
     };
     assert!(status.success());
     assert!(

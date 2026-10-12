@@ -199,16 +199,36 @@ fn windows_junction_settings_directory_is_rejected_without_external_writes() {
     let root = fs::canonicalize(dir.path()).unwrap();
     let external = fs::canonicalize(outside.path()).unwrap();
     let link = root.join(".claude");
-    let output = std::process::Command::new("cmd.exe")
+    use std::{
+        os::windows::process::CommandExt,
+        process::{Command, Stdio},
+        time::{Duration, Instant},
+    };
+    let mut child = Command::new("cmd.exe")
+        .creation_flags(0x08000000)
         .args(["/D", "/C", "mklink", "/J"])
         .arg(&link)
         .arg(&external)
-        .output()
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
         .unwrap();
-    assert!(
-        output.status.success(),
-        "Cannot create the junction fixture"
-    );
+    let start = Instant::now();
+    let status = loop {
+        match child.try_wait() {
+            Ok(Some(status)) => break status,
+            Ok(None) if start.elapsed() <= Duration::from_secs(3) => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            result => {
+                let _ = child.kill();
+                child.wait().unwrap();
+                panic!("Junction fixture wait failed or exceeded its deadline: {result:?}");
+            }
+        }
+    };
+    assert!(status.success(), "Cannot create the junction fixture");
     let result = register::register(&root);
     fs::remove_dir(&link).unwrap();
     assert!(result.is_err());
