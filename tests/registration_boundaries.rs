@@ -137,7 +137,33 @@ fn retired_legacy_paths_and_installed_native_entries_are_recognized_safely() {
         );
         register::register(&root).unwrap();
         register::register(&root).unwrap();
+        let value: Value =
+            serde_json::from_slice(&fs::read(root.join(".mcp.json")).unwrap()).unwrap();
+        assert!(value["mcpServers"].get("upwork-local").is_none());
+        assert!(
+            value["mcpServers"]
+                .get(upwork_connector::MCP_NAME)
+                .is_some()
+        );
     }
+}
+
+#[test]
+fn new_name_collision_preserves_the_owned_legacy_registration() {
+    let dir = temp();
+    let root = fs::canonicalize(dir.path()).unwrap();
+    let path = root.join(".mcp.json");
+    write_json(
+        &path,
+        &json!({"mcpServers":{
+            "upwork-local":{"command":root.join("bin/upwork-connector.exe"),"args":["bridge"]},
+            "Upwork-Agent-mcp":{"command":"foreign","args":["bridge"]}
+        }}),
+    );
+    let before = fs::read(&path).unwrap();
+    assert!(register::register(&root).is_err());
+    assert_eq!(fs::read(path).unwrap(), before);
+    assert!(!root.join(".claude/settings.local.json").exists());
 }
 
 #[test]

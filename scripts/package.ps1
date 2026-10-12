@@ -102,7 +102,7 @@ try {
     $actual = @(Get-ChildItem -LiteralPath $verify -Recurse -Force -File | ForEach-Object { [IO.Path]::GetRelativePath($verify, $_.FullName).Replace('\', '/') })
     if (Compare-Object ($allowed + @('release.json') | Sort-Object) ($actual | Sort-Object)) { throw 'Extracted archive differs from the release allowlist.' }
     $binary = Join-Path $verify "bin/$binaryName"
-    $entry = (Smoke $binary @('desktop-config') 0 | ConvertFrom-Json).mcpServers.'upwork-local'
+    $entry = (Smoke $binary @('desktop-config') 0 | ConvertFrom-Json).mcpServers.'Upwork-Agent-mcp'
     if ($entry.args.Count -ne 1 -or $entry.args[0] -ne 'bridge' -or $entry.command.Replace('\\?\', '') -ne $binary) { throw 'Packaged host configuration requires a launcher or wrong executable.' }
     foreach ($key in @('TEMP', 'TMP', 'TMPDIR')) {
         if ($entry.env.$key.Replace('\\?\', '') -ne (Join-Path $verify '.cache/tmp')) { throw 'Packaged host temporary path escaped the installation.' }

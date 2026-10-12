@@ -4,6 +4,10 @@ use thiserror::Error;
 pub enum Error {
     #[error("{0}")]
     Safe(&'static str),
+    #[error(
+        "MCP transport failed class={0}. Reconnect Upwork-Agent-mcp; no replay or direct fallback."
+    )]
+    Transport(&'static str),
     #[error("Invalid proxy record at line {0}. No profiles imported.")]
     ImportLine(usize),
     #[error("File operation failed. Check configuration permissions and available disk space.")]

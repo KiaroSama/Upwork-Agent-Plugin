@@ -135,9 +135,9 @@ for runtime storage. Setup requires access to your explicitly selected route and
    **1 — Select proxy**. Initial mode is blocked; importing does not enable networking.
 3. Choose **6 — Sign in** yourself. Copy the complete authorization URL into your browser on this
    computer. Keep the terminal open until saved-session/MCP-initialization confirmation.
-4. For Claude Code, choose **7 — Register**, reopen the project and approve/reconnect `upwork-local`.
+4. For Claude Code, choose **7 — Register**, reopen the project and approve/reconnect `Upwork-Agent-mcp`.
    For Desktop, use the entry below. Registration preserves other servers and refuses an unrelated
-   existing `upwork-local` entry.
+   existing `Upwork-Agent-mcp` entry.
 
 `0` returns from submenus, `exit` quits, and Enter in the main menu opens selection.
 **4 — Direct** deliberately bypasses proxies; **5 — Block** disables connector networking.
@@ -157,7 +157,7 @@ Or use this complete example, replacing `<absolute-project-root>` with your inst
 ```json
 {
   "mcpServers": {
-    "upwork-local": {
+    "Upwork-Agent-mcp": {
       "command": "<absolute-project-root>/bin/upwork-connector.exe",
       "args": ["bridge"],
       "env": {
@@ -408,6 +408,13 @@ Each run creates a UTF-8 log in `logs/`, such as `upwork-native_YYYY-MM-DD_HH-mm
 `upwork-bridge_YYYY-MM-DD_HH-mm-ss_UTC.log`; collisions receive a suffix. Entries use
 `[YYYY-MM-DD HH:mm:ss UTC] [LEVEL] [COMPONENT] Message`. INFO, WARNING and ERROR record fixed safe
 startup, callback, failure and shutdown events. File initialization failure falls back to safe stderr.
+
+Transport diagnostics record fixed categories such as `control_post_timeout`, `session_expired`,
+`proxy_or_connect`, `credential_store` and `unexpected_http_response`, plus HTTP operation stage and elapsed
+milliseconds where available. A control POST timeout includes authentication/refresh time, not just network
+latency. These categories do not automatically retry or replay a request. Older generic logs cannot identify
+the underlying cause retrospectively. Project registration migrates only an owned `upwork-local` entry to
+`Upwork-Agent-mcp`; conflicting or foreign entries are refused before any publication.
 
 No raw upstream errors, account payloads, credentials, tokens or authorization links are logged.
 The complete login URL appears only in explicit human sign-in. No debug passthrough or automatic retention

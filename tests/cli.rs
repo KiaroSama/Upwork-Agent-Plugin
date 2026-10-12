@@ -100,23 +100,30 @@ fn desktop_config_and_registration_preserve_other_servers_and_skills() {
     let out = command(dir.path(), &["desktop-config"], "");
     assert!(out.status.success());
     let config: Value = serde_json::from_slice(&out.stdout).unwrap();
-    assert_eq!(config["mcpServers"]["upwork-local"]["args"][2], "bridge");
+    assert_eq!(
+        config["mcpServers"]["Upwork-Agent-mcp"]["args"][2],
+        "bridge"
+    );
     assert!(
-        config["mcpServers"]["upwork-local"]["command"]
+        config["mcpServers"]["Upwork-Agent-mcp"]["command"]
             .as_str()
             .unwrap()
             .contains("upwork-connector")
     );
-    assert!(config["mcpServers"]["upwork-local"].get("type").is_none());
+    assert!(
+        config["mcpServers"]["Upwork-Agent-mcp"]
+            .get("type")
+            .is_none()
+    );
     let root = fs::canonicalize(dir.path()).unwrap();
     for key in ["TEMP", "TMP", "TMPDIR"] {
         assert_eq!(
-            config["mcpServers"]["upwork-local"]["env"][key],
+            config["mcpServers"]["Upwork-Agent-mcp"]["env"][key],
             root.join(".cache/tmp").to_string_lossy().as_ref()
         );
     }
     assert_eq!(
-        config["mcpServers"]["upwork-local"]["env"]["XDG_CACHE_HOME"],
+        config["mcpServers"]["Upwork-Agent-mcp"]["env"]["XDG_CACHE_HOME"],
         root.join(".cache").to_string_lossy().as_ref()
     );
     assert!(dir.path().join(".cache/tmp").is_dir());

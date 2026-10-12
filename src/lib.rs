@@ -4,6 +4,7 @@ pub mod callback;
 pub mod cleanup;
 pub mod config;
 pub mod credentials;
+pub mod diagnostics;
 pub mod error;
 pub mod http_route;
 pub mod import;
@@ -14,4 +15,5 @@ pub mod route;
 pub mod settings;
 pub mod storage;
 
+pub const MCP_NAME: &str = "Upwork-Agent-mcp";
 pub const ENDPOINT: &str = "https://mcp.upwork.com/mcp";

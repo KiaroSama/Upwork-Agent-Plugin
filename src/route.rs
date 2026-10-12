@@ -62,7 +62,7 @@ impl Route {
         })
     }
     fn changed_error() -> Error {
-        Error::Safe("Route changed. Reconnect upwork-local to apply the new selection.")
+        Error::Safe("Route changed. Reconnect Upwork-Agent-mcp to apply the new selection.")
     }
     pub fn check(&self) -> Result<()> {
         if self.revoked.load(Ordering::Acquire) {

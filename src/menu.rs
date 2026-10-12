@@ -96,7 +96,7 @@ if url.eq_ignore_ascii_case("exit"){return Err(Error::Safe("MENU_EXIT"));}config
 if matches!(value.to_lowercase().as_str(),"y"|"yes"){config::update(&path,|c|{c.mode=Mode::Direct;c.selected=None;Ok(())})?;}},
             "5"=>{config::update(&path,|c|{c.mode=Mode::Blocked;c.selected=None;Ok(())})?;},
             "6"=>crate::bridge::run(root,crate::ENDPOINT,true).await?,
-            "7"=>{register::register(root)?;println!("Project MCP registered. Reopen Claude and reconnect upwork-local.");},
+            "7"=>{register::register(root)?;println!("Project MCP registered. Reopen Claude and reconnect Upwork-Agent-mcp.");},
             "8"=>{
                 let current=crate::settings::read(root)?;
                 println!("Current local proxy: {}",current.public_url()?);

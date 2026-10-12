@@ -185,7 +185,7 @@ async fn execute() -> Result<()> {
         }
         "register" => {
             upwork_connector::register::register(&root)?;
-            println!("Native upwork-local MCP registered. Reopen Claude and reconnect.");
+            println!("Native Upwork-Agent-mcp MCP registered. Reopen Claude and reconnect.");
             Ok(())
         }
         "desktop-config" => {
@@ -203,6 +203,15 @@ async fn execute() -> Result<()> {
             "Usage: upwork-connector [--root PATH] menu|status|import PATH|add|select NAME|local-settings [set]|local-proxy|direct|block|sign-in|bridge|register|desktop-config",
         )),
     };
+    if let Err(Error::Auth(error)) = &result {
+        log.event(
+            "ERROR",
+            &format!(
+                "OAuth failure class={}",
+                upwork_connector::diagnostics::auth(error)
+            ),
+        );
+    }
     log.event(
         if result.is_ok() { "INFO" } else { "ERROR" },
         "Native executable stopped; private input suppressed.",

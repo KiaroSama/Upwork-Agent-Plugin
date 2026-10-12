@@ -301,6 +301,7 @@ fn legacy_windows_style_registration_cutover_preserves_other_servers() {
     upwork_connector::register::register(&std::fs::canonicalize(dir.path()).unwrap()).unwrap();
     let c: serde_json::Value =
         serde_json::from_slice(&std::fs::read(dir.path().join(".mcp.json")).unwrap()).unwrap();
-    assert_eq!(c["mcpServers"]["upwork-local"]["args"][2], "bridge");
+    assert_eq!(c["mcpServers"]["Upwork-Agent-mcp"]["args"][2], "bridge");
     assert_eq!(c["mcpServers"]["other"]["command"], "other");
+    assert!(c["mcpServers"].get("upwork-local").is_none());
 }

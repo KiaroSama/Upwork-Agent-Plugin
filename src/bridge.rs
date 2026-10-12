@@ -83,7 +83,9 @@ where
                     line.clear(); route.check()?; sends.push(send_owned(&mut remote,message));
                 }
                 Some(result)=sends.next(),if !sends.is_empty()=>{
-                    result.map_err(|_|Error::Safe("MCP request failed through selected route. Reconnect or run Sign in; no direct fallback."))?;
+                    if let Err(error) = result {
+                        return Err(Error::Transport(crate::diagnostics::transport(&error)));
+                    }
                 }
                 message=remote.receive()=>{
                     let message=message.ok_or(Error::Safe("Remote MCP connection closed. Reconnect or run Sign in."))?;
@@ -124,7 +126,10 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
     if sign_in {
         manager.get_access_token().await?;
         let transport = StreamableHttpClientTransport::with_client(
-            AuthClient::new(crate::http_route::McpRoute::new(route.clone())?, manager),
+            AuthClient::new(
+                crate::http_route::McpRoute::new(route.clone())?.with_log(log.clone()),
+                manager,
+            ),
             StreamableHttpClientTransportConfig::with_uri(endpoint.to_owned()),
         );
         let mut transport = transport;
@@ -164,10 +169,13 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
             "INFO",
             "Sign-in complete; session saved and MCP initialization verified.",
         );
-        println!("Sign-in complete. Session saved locally. Reconnect upwork-local in Claude.");
+        println!("Sign-in complete. Session saved locally. Reconnect Upwork-Agent-mcp in Claude.");
         return Ok(());
     }
-    let client = AuthClient::new(crate::http_route::McpRoute::new(route.clone())?, manager);
+    let client = AuthClient::new(
+        crate::http_route::McpRoute::new(route.clone())?.with_log(log.clone()),
+        manager,
+    );
     let result = relay(
         client,
         route,
@@ -176,6 +184,12 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         tokio::io::stdout(),
     )
     .await;
+    if let Err(Error::Transport(class)) = &result {
+        log.event(
+            "ERROR",
+            &format!("MCP relay failure class={class}; no request replay."),
+        );
+    }
     log.event(
         if result.is_ok() { "INFO" } else { "ERROR" },
         "Native connector stopped; no direct fallback.",

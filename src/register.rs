@@ -42,7 +42,7 @@ pub fn desktop(root: &Path) -> Result<Value> {
     };
     let temp = root.join(".cache/tmp");
     let cache = root.join(".cache");
-    Ok(json!({"mcpServers":{"upwork-local":{
+    Ok(json!({"mcpServers":{(crate::MCP_NAME):{
         "command":executable,"args":args,
         "env":{"TEMP":temp,"TMP":temp,"TMPDIR":temp,"XDG_CACHE_HOME":cache}
     }}}))
@@ -147,18 +147,25 @@ pub fn register(root: &Path) -> Result<()> {
     {
         return Err(Error::Safe("Invalid existing MCP configuration."));
     }
-    let mut entry = desktop(&root)?["mcpServers"]["upwork-local"].clone();
-    let old = &mcp["mcpServers"]["upwork-local"];
-    if !old.is_null() && !owned_registration(&root, old, &entry) {
-        return Err(Error::Safe(
-            "Unrelated upwork-local registration exists; replacement refused.",
-        ));
+    let mut entry = desktop(&root)?["mcpServers"][crate::MCP_NAME].clone();
+    for name in [crate::MCP_NAME, "upwork-local"] {
+        if let Some(old) = mcp["mcpServers"].get(name)
+            && !owned_registration(&root, old, &entry)
+        {
+            return Err(Error::Safe(
+                "Unrelated Upwork MCP registration exists; replacement refused.",
+            ));
+        }
     }
     if mcp.get("mcpServers").is_none() {
         mcp["mcpServers"] = json!({});
     }
     entry["type"] = json!("stdio");
-    mcp["mcpServers"]["upwork-local"] = entry;
+    mcp["mcpServers"]
+        .as_object_mut()
+        .expect("Validated MCP object")
+        .remove("upwork-local");
+    mcp["mcpServers"][crate::MCP_NAME] = entry;
     if settings.get("deniedMcpServers").is_none() {
         settings["deniedMcpServers"] = json!([]);
     }
