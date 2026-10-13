@@ -89,6 +89,7 @@ async fn heartbeat_case(observed_ping: bool) {
     let mut relay =
         tokio::spawn(async move { bridge::relay(client, route, &endpoint, input, output).await });
     let mut reader = BufReader::new(reader);
+    let mut relay_joined = false;
     let outcome = tokio::time::timeout(Duration::from_secs(10), async {
         writer.write_all(b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"fixture\",\"version\":\"1\"}}}\n").await.unwrap();
         let mut line = String::new();
@@ -108,6 +109,7 @@ async fn heartbeat_case(observed_ping: bool) {
         entered.notified().await;
         if !observed_ping {
             let result = (&mut relay).await.unwrap();
+            relay_joined = true;
             assert!(matches!(result, Err(upwork_connector::error::Error::Transport("control_post_timeout"))));
             return;
         }
@@ -132,10 +134,14 @@ async fn heartbeat_case(observed_ping: bool) {
         reader.read_line(&mut line).await.unwrap();
         assert!(line.contains("tools"));
         writer.shutdown().await.unwrap();
-        assert!((&mut relay).await.unwrap().is_ok());
+        let result = (&mut relay).await.unwrap();
+        relay_joined = true;
+        assert!(result.is_ok());
     }).await;
-    relay.abort();
-    let _ = relay.await;
+    if !relay_joined {
+        relay.abort();
+        let _ = relay.await;
+    }
     server.abort();
     let _ = server.await;
     outcome.unwrap();
