@@ -110,7 +110,7 @@ fn oversized_sparse_file_uses_the_controlled_size_error() {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn oversized_input_does_not_abort_under_a_bounded_address_space() {
+fn oversized_input_is_size_rejected_under_a_bounded_address_space() {
     let dir = temp();
     let (config, before) = saved_config(dir.path());
     let input = dir.path().join("large.txt");
@@ -130,7 +130,11 @@ fn oversized_input_does_not_abort_under_a_bounded_address_space() {
             .arg("import")
             .arg(input),
     );
-    assert_eq!(out.status.code(), Some(1), "Expected an error, not an abort");
+    assert_eq!(
+        out.status.code(),
+        Some(1),
+        "Expected a controlled size rejection"
+    );
     assert!(String::from_utf8_lossy(&out.stderr).contains("Proxy file exceeds 1 MiB."));
     assert_eq!(fs::read(config).unwrap(), before);
 }
@@ -141,7 +145,13 @@ fn no_writer_fifo_is_rejected_before_a_blocking_open() {
     let dir = temp();
     let (config, before) = saved_config(dir.path());
     let input = dir.path().join("unopened.fifo");
-    assert!(Command::new("mkfifo").arg(&input).status().unwrap().success());
+    assert!(
+        Command::new("mkfifo")
+            .arg(&input)
+            .status()
+            .unwrap()
+            .success()
+    );
     let out = bounded_process(
         Command::new(env!("CARGO_BIN_EXE_upwork-connector"))
             .arg("--root")
