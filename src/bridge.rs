@@ -1,3 +1,5 @@
+mod verification;
+
 use crate::{
     auth,
     credentials::Store,
@@ -176,26 +178,8 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
             StreamableHttpClientTransportConfig::with_uri(endpoint.to_owned()),
         );
         let mut transport = transport;
-        let message: ClientJsonRpcMessage = serde_json::from_value(
-            serde_json::json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"upwork-native-sign-in","version":env!("CARGO_PKG_VERSION")}}}),
-        )?;
         let verification = tokio::time::timeout(Duration::from_secs(30), async {
-            let send = send_owned(&mut transport, message);
-            let (sent, response) = tokio::join!(send, transport.receive());
-            sent.map_err(|_| Error::Safe("Session saved but MCP initialization failed."))?;
-            let response = response.ok_or(Error::Safe("MCP initialization did not return."))?;
-            let initialized = serde_json::from_value(
-                serde_json::json!({"jsonrpc":"2.0","method":"notifications/initialized"}),
-            )?;
-            send_owned(&mut transport, initialized)
-                .await
-                .map_err(|_| Error::Safe("MCP initialization notification failed."))?;
-            let v = serde_json::to_value(response)?;
-            if v.get("result").and_then(|v| v.get("serverInfo")).is_none() {
-                return Err(Error::Safe(
-                    "MCP initialization rejected; sign-in not verified.",
-                ));
-            }
+            verification::initialize(&mut transport).await?;
             if store.load_local()?.and_then(|c| c.token_response).is_none() {
                 return Err(Error::Safe("No usable session stored."));
             }
