@@ -80,14 +80,13 @@ pub(super) async fn post(
     {
         let challenge = challenge.to_str().map_err(|_| invalid())?.to_owned();
         return Err(if status.as_u16() == 401 {
-            StreamableHttpError::AuthRequired(AuthRequiredError {
-                www_authenticate_header: challenge,
-            })
+            StreamableHttpError::AuthRequired(AuthRequiredError::new(challenge))
         } else {
-            StreamableHttpError::InsufficientScope(InsufficientScopeError {
-                required_scope: scope(&challenge),
-                www_authenticate_header: challenge,
-            })
+            let required_scope = scope(&challenge);
+            StreamableHttpError::InsufficientScope(InsufficientScopeError::new(
+                challenge,
+                required_scope,
+            ))
         });
     }
     if status.as_u16() == 404 && attached {
