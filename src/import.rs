@@ -3,8 +3,47 @@ use crate::{
     error::{Error, Result},
 };
 use regex::Regex;
-use std::{collections::HashSet, fs, path::Path};
+use std::{collections::HashSet, fs, io::Read, path::Path};
 use url::Url;
+
+const MAX_IMPORT_BYTES: u64 = 1024 * 1024;
+
+fn read_error() -> Error {
+    Error::Safe("Cannot read proxy file. Check the path, permissions and UTF-8 encoding.")
+}
+
+fn validate_source(metadata: &fs::Metadata) -> Result<()> {
+    if !metadata.is_file() {
+        return Err(Error::Safe("Proxy input must be a regular UTF-8 file."));
+    }
+    if metadata.len() > MAX_IMPORT_BYTES {
+        return Err(Error::Safe("Proxy file exceeds 1 MiB."));
+    }
+    Ok(())
+}
+
+fn bounded_bytes(reader: impl Read) -> Result<Vec<u8>> {
+    let mut data = Vec::new();
+    // The extra byte detects overflow without reading or allocating for the whole file.
+    // Keep this bound even after checking metadata: a file may grow after it is opened.
+    reader
+        .take(MAX_IMPORT_BYTES + 1)
+        .read_to_end(&mut data)
+        .map_err(|_| read_error())?;
+    if data.len() as u64 > MAX_IMPORT_BYTES {
+        return Err(Error::Safe("Proxy file exceeds 1 MiB."));
+    }
+    Ok(data)
+}
+
+fn source_bytes(input: &str) -> Result<Vec<u8>> {
+    // Reject ordinary FIFOs/devices before open, which can otherwise block indefinitely.
+    validate_source(&fs::metadata(input).map_err(|_| read_error())?)?;
+    let file = fs::File::open(input).map_err(|_| read_error())?;
+    // Recheck the opened file, not just the earlier pathname metadata.
+    validate_source(&file.metadata().map_err(|_| read_error())?)?;
+    bounded_bytes(file)
+}
 
 pub fn records(text: &str) -> Result<Vec<Profile>> {
     let pattern =
@@ -77,12 +116,7 @@ pub fn import_file(config: &Path, input: &str) -> Result<(usize, usize)> {
     {
         input = &input[1..input.len() - 1];
     }
-    let data = fs::read(input).map_err(|_| {
-        Error::Safe("Cannot read proxy file. Check the path, permissions and UTF-8 encoding.")
-    })?;
-    if data.len() > 1024 * 1024 {
-        return Err(Error::Safe("Proxy file exceeds 1 MiB."));
-    }
+    let data = source_bytes(input)?;
     let text = std::str::from_utf8(&data).map_err(|_| Error::Safe("Proxy file must use UTF-8."))?;
     let parsed = records(text)?;
     let mut imported = 0;
@@ -129,4 +163,70 @@ pub fn import_file(config: &Path, input: &str) -> Result<(usize, usize)> {
         Ok(())
     })?;
     Ok((imported, skipped))
+}
+
+#[cfg(test)]
+mod bounded_read_tests {
+    use super::*;
+    use std::io::{self, Cursor};
+
+    #[test]
+    fn overflowing_reader_consumes_only_the_limit_plus_one_byte() {
+        let mut reader = io::repeat(b'x');
+        let mut counted = (&mut reader).take(MAX_IMPORT_BYTES * 4);
+        assert!(matches!(
+            bounded_bytes(&mut counted),
+            Err(Error::Safe("Proxy file exceeds 1 MiB."))
+        ));
+        assert_eq!(counted.limit(), MAX_IMPORT_BYTES * 3 - 1);
+    }
+
+    #[test]
+    fn empty_and_exact_limit_readers_are_not_misclassified_as_overflow() {
+        assert!(bounded_bytes(io::empty()).unwrap().is_empty());
+        let exact = vec![b'x'; MAX_IMPORT_BYTES as usize];
+        assert_eq!(bounded_bytes(Cursor::new(&exact)).unwrap(), exact);
+    }
+
+    struct InterruptedThenShort {
+        interrupted: bool,
+        remaining: usize,
+    }
+
+    impl Read for InterruptedThenShort {
+        fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+            if !self.interrupted {
+                self.interrupted = true;
+                return Err(io::ErrorKind::Interrupted.into());
+            }
+            let count = bytes.len().min(self.remaining).min(7);
+            bytes[..count].fill(b'x');
+            self.remaining -= count;
+            Ok(count)
+        }
+    }
+
+    #[test]
+    fn bounded_reader_handles_interrupted_and_short_reads() {
+        let bytes = bounded_bytes(InterruptedThenShort {
+            interrupted: false,
+            remaining: 101,
+        })
+        .unwrap();
+        assert_eq!(bytes, vec![b'x'; 101]);
+    }
+
+    struct Failed;
+    impl Read for Failed {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            Err(io::Error::other("fixture private input must not escape"))
+        }
+    }
+
+    #[test]
+    fn read_failure_keeps_private_io_details_out_of_the_public_error() {
+        let error = bounded_bytes(Failed).unwrap_err().to_string();
+        assert_eq!(error, read_error().to_string());
+        assert!(!error.contains("fixture private"));
+    }
 }
