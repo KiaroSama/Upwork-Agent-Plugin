@@ -28,6 +28,11 @@ fn saved_config(root: &Path) -> (std::path::PathBuf, Vec<u8>) {
 }
 
 fn bounded_process(command: &mut Command) -> Output {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
     let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -146,10 +151,8 @@ fn no_writer_fifo_is_rejected_before_a_blocking_open() {
     let (config, before) = saved_config(dir.path());
     let input = dir.path().join("unopened.fifo");
     assert!(
-        Command::new("mkfifo")
-            .arg(&input)
-            .status()
-            .unwrap()
+        bounded_process(Command::new("mkfifo").arg(&input))
+            .status
             .success()
     );
     let out = bounded_process(
