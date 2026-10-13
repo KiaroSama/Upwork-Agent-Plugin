@@ -412,7 +412,10 @@ startup, callback, failure and shutdown events. File initialization failure fall
 Transport diagnostics record fixed categories such as `control_post_timeout`, `session_expired`,
 `proxy_or_connect`, `credential_store` and `unexpected_http_response`, plus HTTP operation stage and elapsed
 milliseconds where available. A control POST timeout includes authentication/refresh time, not just network
-latency. These categories do not automatically retry or replay a request. Older generic logs cannot identify
+latency. A timed-out result for an observed server ping records a WARNING and keeps the same transport
+open: the SDK releases that control slot, and the connector never replays the reply. Unmatched replies,
+ordinary requests and other send failures still fail closed; route changes still stop the old connection.
+These categories do not automatically retry or replay a request. Older generic logs cannot identify
 the underlying cause retrospectively. Project registration migrates only an owned `upwork-local` entry to
 `Upwork-Agent-mcp`; conflicting or foreign entries are refused before any publication.
 

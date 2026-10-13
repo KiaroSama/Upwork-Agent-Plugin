@@ -7,7 +7,7 @@ use crate::{
 };
 use futures::stream::{FuturesUnordered, StreamExt};
 use rmcp::{
-    model::ClientJsonRpcMessage,
+    model::{ClientJsonRpcMessage, ServerJsonRpcMessage, ServerRequest},
     transport::{
         AuthClient, StreamableHttpClientTransport, Transport,
         streamable_http_client::{StreamableHttpClient, StreamableHttpClientTransportConfig},
@@ -59,7 +59,23 @@ pub async fn relay<C, R, W>(
     route: Route,
     endpoint: &str,
     input: R,
+    output: W,
+) -> Result<()>
+where
+    C: StreamableHttpClient + Send + Sync,
+    R: tokio::io::AsyncRead + Unpin,
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    relay_logged(client, route, endpoint, input, output, None).await
+}
+
+async fn relay_logged<C, R, W>(
+    client: C,
+    route: Route,
+    endpoint: &str,
+    input: R,
     mut output: W,
+    log: Option<Log>,
 ) -> Result<()>
 where
     C: StreamableHttpClient + Send + Sync,
@@ -73,6 +89,7 @@ where
     let mut input = BufReader::new(input);
     let mut line = Vec::new();
     let mut sends = FuturesUnordered::new();
+    let mut pings = std::collections::HashSet::new();
     let result = route.guard(async {
         loop {
             tokio::select! {
@@ -80,16 +97,42 @@ where
                 count=read_bounded(&mut input,&mut line), if sends.len()<16=>{
                     if count?==0 {return Ok(());}
                     let message:ClientJsonRpcMessage=serde_json::from_slice(&line)?;
-                    line.clear(); route.check()?; sends.push(send_owned(&mut remote,message));
+                    line.clear(); route.check()?;
+                    let ping_reply = match &message {
+                        ClientJsonRpcMessage::Response(response) => pings.remove(&response.id),
+                        ClientJsonRpcMessage::Error(error) => {
+                            if let Some(id) = &error.id { pings.remove(id); }
+                            false
+                        }
+                        _ => false,
+                    };
+                    let send = send_owned(&mut remote,message);
+                    sends.push(async move { (ping_reply, send.await) });
                 }
-                Some(result)=sends.next(),if !sends.is_empty()=>{
+                Some((ping_reply,result))=sends.next(),if !sends.is_empty()=>{
                     if let Err(error) = result {
-                        return Err(Error::Transport(crate::diagnostics::transport(&error)));
+                        // The SDK releases this control slot and keeps the worker usable.
+                        // Do not replay the reply or turn a heartbeat deadline into process death.
+                        if ping_reply && matches!(error, rmcp::transport::streamable_http_client::StreamableHttpError::ControlRequestTimeout) {
+                            if let Some(log) = &log {
+                                log.event("WARNING", "MCP heartbeat reply class=control_post_timeout; same transport retained, no replay.");
+                            }
+                        } else {
+                            return Err(Error::Transport(crate::diagnostics::transport(&error)));
+                        }
                     }
                 }
                 message=remote.receive()=>{
                     let message=message.ok_or(Error::Safe("Remote MCP connection closed. Reconnect or run Sign in."))?;
                     route.check()?;
+                    if let ServerJsonRpcMessage::Request(request) = &message
+                        && matches!(request.request, ServerRequest::PingRequest(_))
+                    {
+                        if pings.len() >= 16 && !pings.contains(&request.id) {
+                            return Err(Error::Safe("Too many unanswered MCP pings."));
+                        }
+                        pings.insert(request.id.clone());
+                    }
                     let mut bytes=serde_json::to_vec(&message)?; bytes.push(b'\n');
                     output.write_all(&bytes).await?; output.flush().await?;
                 }
@@ -176,12 +219,13 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         crate::http_route::McpRoute::new(route.clone())?.with_log(log.clone()),
         manager,
     );
-    let result = relay(
+    let result = relay_logged(
         client,
         route,
         endpoint,
         tokio::io::stdin(),
         tokio::io::stdout(),
+        Some(log.clone()),
     )
     .await;
     if let Err(Error::Transport(class)) = &result {
