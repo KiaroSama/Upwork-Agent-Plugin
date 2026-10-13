@@ -56,8 +56,8 @@ fn validated_command(args: &[String]) -> Result<&str> {
     let command = args.first().map(String::as_str).unwrap_or("menu");
     let valid = match command {
         "menu" => args.len() <= 1,
-        "status" | "add" | "local-proxy" | "direct" | "block" | "sign-in" | "bridge" | "preview"
-        | "register" | "desktop-config" | "--version" => args.len() == 1,
+        "status" | "add" | "local-proxy" | "direct" | "block" | "sign-in" | "bridge"
+        | "preview" | "register" | "desktop-config" | "--version" => args.len() == 1,
         "import" | "select" => args.len() == 2 && !args[1].is_empty(),
         "local-settings" => args.len() == 1 || (args.len() == 2 && args[1] == "set"),
         "cleanup" => args.len() == 1 || (args.len() == 2 && args[1] == "--apply"),

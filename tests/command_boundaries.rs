@@ -167,7 +167,11 @@ fn status_default_port_output_remains_valid_and_does_not_change_private_storage(
         "name": "keep",
         "url": "http://fixture-user:fixture-password@proxy.invalid:80"
     });
-    assert!(run(dir.path(), &["add"], &profile.to_string()).status.success());
+    assert!(
+        run(dir.path(), &["add"], &profile.to_string())
+            .status
+            .success()
+    );
     let before = fs::read(&path).unwrap();
     let output = run(dir.path(), &["status"], "");
     assert!(output.status.success());
