@@ -172,7 +172,9 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         manager.get_access_token().await?;
         let transport = StreamableHttpClientTransport::with_client(
             AuthClient::new(
-                crate::http_route::McpRoute::new(route.clone())?.with_log(log.clone()),
+                crate::http_route::McpRoute::new(route.clone())?
+                    .with_log(log.clone())
+                    .with_initialization_verification(),
                 manager,
             ),
             StreamableHttpClientTransportConfig::with_uri(endpoint.to_owned()),

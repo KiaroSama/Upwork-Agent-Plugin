@@ -248,11 +248,17 @@ mod tests {
         let server = tokio::spawn(async move {
             let _ = axum::serve(listener, app).await;
         });
-        let client = reqwest::Client::builder()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .unwrap();
+        std::fs::create_dir_all(".ci-work").unwrap();
+        let root = tempfile::tempdir_in(".ci-work").unwrap();
+        let path = root.path().join("config/connections.json");
+        crate::config::update(&path, |config| {
+            config.mode = crate::config::Mode::Direct;
+            Ok(())
+        })
+        .unwrap();
+        let client = crate::http_route::McpRoute::new(crate::route::Route::new(path).unwrap())
+            .unwrap()
+            .with_initialization_verification();
         let mut transport = StreamableHttpClientTransport::with_client(
             client,
             StreamableHttpClientTransportConfig::with_uri(endpoint),
@@ -280,6 +286,35 @@ mod tests {
         let (result, count) = wire_case(valid(), StatusCode::ACCEPTED, true).await;
         assert!(result.is_ok());
         assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn mixed_response_envelopes_never_send_ready_on_json_or_sse() {
+        for sse in [false, true] {
+            for (key, value) in [
+                (
+                    "error",
+                    json!({"code": -32602, "message": "private-fixture-marker"}),
+                ),
+                ("method", json!("ping")),
+            ] {
+                let mut response = valid();
+                response[key] = value;
+                let (result, count) = wire_case(response, StatusCode::ACCEPTED, sse).await;
+                assert!(result.is_err());
+                assert_eq!(count, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn sdk_normalization_cannot_replace_raw_envelope_validation() {
+        let mut response = valid();
+        response["error"] = json!({"code": -32602, "message": "rejected"});
+        let normalized: rmcp::model::ServerJsonRpcMessage =
+            serde_json::from_value(response.clone()).unwrap();
+        assert!(validate(&response).is_err());
+        assert!(validate(&serde_json::to_value(normalized).unwrap()).is_ok());
     }
 
     #[tokio::test]

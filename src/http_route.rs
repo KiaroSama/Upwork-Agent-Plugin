@@ -1,3 +1,6 @@
+mod event_limit;
+mod initialization;
+
 use crate::route::Route;
 use http::{HeaderName, HeaderValue};
 use rmcp::{
@@ -16,6 +19,7 @@ pub struct McpRoute {
     client: reqwest::Client,
     route: Route,
     log: Option<crate::logging::Log>,
+    verify_initialization: bool,
 }
 impl McpRoute {
     pub fn new(route: Route) -> crate::error::Result<Self> {
@@ -23,10 +27,15 @@ impl McpRoute {
             client: route.client(false, None)?,
             route,
             log: None,
+            verify_initialization: false,
         })
     }
     pub fn with_log(mut self, log: crate::logging::Log) -> Self {
         self.log = Some(log);
+        self
+    }
+    pub(crate) fn with_initialization_verification(mut self) -> Self {
+        self.verify_initialization = true;
         self
     }
     async fn guarded<T>(
@@ -67,10 +76,13 @@ impl StreamableHttpClient for McpRoute {
         auth: Option<String>,
         headers: HashMap<HeaderName, HeaderValue>,
     ) -> Result<StreamableHttpPostResponse, StreamableHttpError<Self::Error>> {
-        self.guarded(
-            "post",
-            self.client
-                .post_message(uri, message, session, auth, headers),
+        self.post_message_with_max_sse_event_size(
+            uri,
+            message,
+            session,
+            auth,
+            headers,
+            16 * 1024 * 1024,
         )
         .await
     }
@@ -83,6 +95,17 @@ impl StreamableHttpClient for McpRoute {
         headers: HashMap<HeaderName, HeaderValue>,
         max: usize,
     ) -> Result<StreamableHttpPostResponse, StreamableHttpError<Self::Error>> {
+        if self.verify_initialization
+            && matches!(&message, ClientJsonRpcMessage::Request(request)
+                if matches!(request.request, rmcp::model::ClientRequest::InitializeRequest(_)))
+        {
+            return self
+                .guarded(
+                    "post",
+                    initialization::post(&self.client, uri, message, session, auth, (headers, max)),
+                )
+                .await;
+        }
         self.guarded(
             "post",
             self.client

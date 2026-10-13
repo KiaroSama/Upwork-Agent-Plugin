@@ -20,6 +20,7 @@ rmcp = { version = "=3.5.1", default-features = false, features = ["client", "au
 rpassword = "7"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sse-stream = "=0.2.6"
 thiserror = "2"
 tokio = { version = "1", features = ["rt", "macros", "net", "io-util", "io-std", "sync", "time", "signal"] }
 uuid = { version = "1", features = ["v4"] }

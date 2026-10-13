@@ -287,7 +287,9 @@ Direct mode. Reconnect after route changes; never put credentials in arguments.
 The official SDK handles protocol/OAuth state machines. The human copies the complete genuine URL into
 an external browser on this computer; no automatic browser launch occurs. Keep the terminal open until
 usable persisted credentials **and successful MCP initialization** are confirmed. A browser callback
-page alone is not proof of completion.
+page alone is not proof of completion. Manual verification checks the matching response ID, typed result
+and supported initialize-based protocol before sending readiness. Conflicting JSON/SSE response envelopes
+are rejected before SDK normalization; invalid responses cannot claim successful sign-in.
 
 Legacy sessions are read without modifying their files; native refresh/sign-in writes separate Rust state.
 An authorization-server mismatch fails closed rather than deleting original credentials.

@@ -40,9 +40,17 @@ The 30-case native matrix included 17 malformed responses incorrectly accepted a
 
 ## Production boundaries retained
 
-Only sign-in's verification block delegates to the new private helper. Normal stdio relay, heartbeat timeout handling, selected-route behavior, blocked mode, OAuth exchange and credential persistence are not redesigned. The existing route-change guard, 30-second verification deadline and bounded cleanup remain. Dependencies, lockfile, release versions and CI/security gates are unchanged.
+Only sign-in's verification block delegates to the new private helper. Normal stdio relay, heartbeat timeout handling, selected-route behavior, blocked mode, OAuth exchange and credential persistence are not redesigned. The existing route-change guard, 30-second verification deadline and bounded cleanup remain. The original correction left dependencies, lockfile, release versions and CI/security gates unchanged. The reviewing follow-up reuses the already-locked `sse-stream` 0.2.6 parser as a direct dependency for the manual verification boundary; package versions and normal relay semantics remain unchanged.
 
 The matrix's immediate SSE success response preceded by a ping is only a positive compatibility control: it does not demonstrate handling a server that waits for a ping reply before returning initialization. No general support for that scenario, a new protocol lifecycle, hostile concurrent filesystem mutation, or live Upwork account operations is claimed.
+
+## Reviewing-agent raw-envelope correction — 2026-10-14
+
+Independent source review found that the pinned SDK's untagged message decoder ignores an `error` field when the same raw object also has a valid `result`. Serializing that typed response before validation loses evidence of the conflict. A raw-Value unit test alone does not exercise this production path.
+
+Manual sign-in now enables a narrow initialize-POST decoder on the existing routed client. JSON and SSE envelopes are checked before SDK normalization. Mixed `result`/`error`/`method` forms fail with fixed safe errors; valid logging and ping events remain available to the SDK. SSE uses the existing locked parser with a pre-parse, chunk-aware per-event byte limit; JSON body reads are bounded. Other relay requests and readiness POSTs remain SDK-delegated. Production-seam wire regressions cover conflicting JSON/SSE responses with zero readiness.
+
+The three original owner commits were corrected to the required raw public author/committer identity with verified private recovery and an exact old-ref lease. Their trees, dates, messages and parent topology are preserved; no signatures were removed. Subsequent source correction requires its own final-head CI and artifact receipt; older-head success is not approval of that correction.
 
 ## Regression suite and CI acceptance
 
@@ -56,7 +64,7 @@ Dependabot already covers Cargo and GitHub Actions daily. No duplicate updater o
 
 ## Commit identity and integration gate
 
-All historical and future published author and committer identities must use `Kiaro.Sama.Dev@gmail.com` as required by the owner. The connector's commit action has no identity arguments and created this PR's commits with the account's noreply email. This is explicitly not compliant and remains an integration gate, not a hidden exception.
+All historical and future published author and committer identities must use `Kiaro.Sama.Dev@gmail.com` as required by the owner. The connector's commit action has no identity arguments and created this PR's commits with the account's noreply email. Those original identities were explicitly noncompliant; the reviewing agent repaired the three commits before integration. New final-head verification remains required, not waived by the repair.
 
 The reviewing agent must inventory raw `%ae` and `%ce` values, retain a verified private recovery bundle and old-to-new mapping, coordinate affected refs under the Rules, repair nonconforming owner history, and verify unchanged content trees/topology and intended identity changes before a lease-protected push. Preserve provenance and handle signed commits/tags under the Rules; never silently discard someone else's work. A mailmap or coauthor trailer does not repair raw Git identities. Rerun final-head checks after any history repair. The assistant has not changed main or global account settings.
 
