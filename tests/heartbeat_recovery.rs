@@ -49,6 +49,9 @@ async fn heartbeat_case(observed_ping: bool) {
         let dropped = dropped.clone();
         let fast_seen = fast_seen.clone();
         async move {
+            if v.get("id").is_none() {
+                return StatusCode::ACCEPTED.into_response();
+            }
             if v.get("method").is_none() && v.get("id").is_some() {
                 seen.fetch_add(1, Ordering::SeqCst);
                 if v["id"] == "slow-ping" {
@@ -91,6 +94,7 @@ async fn heartbeat_case(observed_ping: bool) {
         let mut line = String::new();
         reader.read_line(&mut line).await.unwrap();
         assert!(line.contains("serverInfo"));
+        writer.write_all(b"{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}\n").await.unwrap();
         // Observe the actual server ping before submitting its result.
         if observed_ping {
             writer.write_all(b"{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"ping\"}\n").await.unwrap();
