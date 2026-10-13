@@ -1,5 +1,8 @@
 {
   "source": "3748197 Node24.21.0",
+  "amendments": [
+    "2026-10-13 R04: preserve the explicit HTTP default port in sanitized output so the result remains valid input; all other historical expectations are unchanged."
+  ],
   "cases": [
     {
       "input": {
@@ -70,7 +73,7 @@
           {
             "name": "test",
             "label": "test",
-            "url": "http://proxy.example/"
+            "url": "http://proxy.example:80/"
           }
         ]
       }
