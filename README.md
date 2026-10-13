@@ -254,7 +254,10 @@ The final field is the display label, including spaces. Standard proxy URLs also
 Colon-delimited credentials cannot contain literal colons; use percent-encoded URL userinfo instead.
 Imports append validated profiles and skip identical normalized URLs, including credentials.
 One bad line rejects the complete import without partial writes; errors show only the line number.
-Import never changes the active route or modifies the input file.
+Import accepts only regular files (including symlinks to regular files), up to 1 MiB. The reader also
+enforces that bound if a file grows after its metadata is checked. Pipes, devices and directories are rejected.
+Import never changes the active route or modifies the input file. Public `status` and local-settings URLs
+remove credentials but retain an explicit port, including HTTP 80 and HTTPS 443, so they remain valid inputs.
 
 ```bash
 ./bin/upwork-connector.exe import /absolute/path/to/my-private-proxies.txt
@@ -271,7 +274,9 @@ Import never changes the active route or modifies the input file.
 `select` uses the internal `name` returned by `status`, not a spaced display label. Other commands:
 `add` (JSON stdin), `direct`, `block`, `sign-in`, `bridge`, `register`, `desktop-config`, `preview`,
 `local-settings [set]` and `local-proxy`. Agents with local shell access use these same commands;
-no extra management MCP tools are introduced. Reconnect after route changes; never put credentials in arguments.
+no extra management MCP tools are introduced. Unsupported extra arguments fail before startup cleanup or
+configuration changes; put `--root PATH` before the command. An unsupported `direct --help` never enables
+Direct mode. Reconnect after route changes; never put credentials in arguments.
 
 ## Manual OAuth
 
