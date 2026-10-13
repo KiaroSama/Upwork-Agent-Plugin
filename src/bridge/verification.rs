@@ -82,8 +82,7 @@ mod tests {
         routing::post,
     };
     use rmcp::transport::{
-        StreamableHttpClientTransport,
-        streamable_http_client::StreamableHttpClientTransportConfig,
+        StreamableHttpClientTransport, streamable_http_client::StreamableHttpClientTransportConfig,
     };
     use std::{
         sync::{
@@ -129,7 +128,13 @@ mod tests {
 
     #[test]
     fn refuses_mismatched_missing_and_invalid_ids() {
-        for id in [json!(999), json!("999"), json!(null), json!(true), json!({})] {
+        for id in [
+            json!(999),
+            json!("999"),
+            json!(null),
+            json!(true),
+            json!({}),
+        ] {
             let mut response = valid();
             response["id"] = id;
             assert!(validate(&response).is_err());
