@@ -52,10 +52,30 @@ async fn main() {
     };
     std::process::exit(code);
 }
+fn validated_command(args: &[String]) -> Result<&str> {
+    let command = args.first().map(String::as_str).unwrap_or("menu");
+    let valid = match command {
+        "menu" => args.len() <= 1,
+        "status" | "add" | "local-proxy" | "direct" | "block" | "sign-in" | "bridge" | "preview"
+        | "register" | "desktop-config" | "--version" => args.len() == 1,
+        "import" | "select" => args.len() == 2 && !args[1].is_empty(),
+        "local-settings" => args.len() == 1 || (args.len() == 2 && args[1] == "set"),
+        "cleanup" => args.len() == 1 || (args.len() == 2 && args[1] == "--apply"),
+        _ => false,
+    };
+    if !valid {
+        return Err(Error::Safe(
+            "Invalid command arguments. Use --root PATH before the command; extra arguments are not accepted.",
+        ));
+    }
+    Ok(command)
+}
+
 async fn execute() -> Result<()> {
     let (root, args) = root()?;
+    // Validate the complete invocation before creating state, logging or networking.
+    let command = validated_command(&args)?;
     upwork_connector::register::prepare_cache(&root)?;
-    let command = args.first().map(String::as_str).unwrap_or("menu");
     let log = Log::new(&root, "upwork-native");
     log.event("INFO", "Native executable started version=2.1.0.");
     let cleanup_command = command == "cleanup";

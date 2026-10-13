@@ -84,16 +84,32 @@ impl Connections {
     pub fn status(&self) -> Result<serde_json::Value> {
         let mut profiles = vec![];
         for p in &self.profiles {
-            let mut url = proxy_url(&p.url)?;
-            url.set_username("")
-                .map_err(|_| Error::Safe("Cannot sanitize proxy URL."))?;
-            url.set_password(None)
-                .map_err(|_| Error::Safe("Cannot sanitize proxy URL."))?;
-            profiles.push(serde_json::json!({"name":p.name,"label":p.label.as_ref().unwrap_or(&p.name),"url":url.as_str()}));
+            let url = public_proxy_url(&p.url)?;
+            profiles.push(serde_json::json!({"name":p.name,"label":p.label.as_ref().unwrap_or(&p.name),"url":url}));
         }
         Ok(serde_json::json!({"mode":self.mode,"selected":self.selected,"profiles":profiles}))
     }
 }
+/// Remove credentials while retaining an explicit port accepted by the input validator.
+pub fn public_proxy_url(raw: &str) -> Result<String> {
+    let mut url = proxy_url(raw)?;
+    let port = url
+        .port_or_known_default()
+        .ok_or(Error::Safe("Proxy port is missing."))?;
+    url.set_username("")
+        .map_err(|_| Error::Safe("Cannot sanitize proxy URL."))?;
+    url.set_password(None)
+        .map_err(|_| Error::Safe("Cannot sanitize proxy URL."))?;
+    if url.port().is_some() {
+        return Ok(url.into());
+    }
+    // URL serialization omits HTTP(S) default ports. Restore them without
+    // rebuilding the authority, so IPv6 brackets and encoded hosts remain intact.
+    let authority = &url[..url::Position::AfterHost];
+    let tail = &url[url::Position::AfterHost..];
+    Ok(format!("{authority}:{port}{tail}"))
+}
+
 pub fn proxy_url(raw: &str) -> Result<Url> {
     let url = Url::parse(raw).map_err(|_| Error::Safe("Invalid proxy URL."))?;
     let tail = raw.trim_end_matches('/').rsplit_once(':').map(|(_, p)| p);

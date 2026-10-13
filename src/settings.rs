@@ -27,12 +27,7 @@ impl LocalProxy {
         Ok(())
     }
     pub fn public_url(&self) -> Result<String> {
-        let mut url = config::proxy_url(&self.url)?;
-        url.set_username("")
-            .map_err(|_| Error::Safe("Cannot sanitize local proxy."))?;
-        url.set_password(None)
-            .map_err(|_| Error::Safe("Cannot sanitize local proxy."))?;
-        Ok(url.to_string())
+        config::public_proxy_url(&self.url)
     }
 }
 pub fn read(root: &Path) -> Result<LocalProxy> {
