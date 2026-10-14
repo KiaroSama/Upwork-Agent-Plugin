@@ -40,10 +40,10 @@ Git or local compilation is needed.
 
 | Machine | Download |
 | --- | --- |
-| Windows x64 | [upwork-agent-plugin-2.1.1-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.1-windows-x64.zip) |
-| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.1-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.1-linux-x64.tar.gz) |
-| macOS Apple Silicon | [upwork-agent-plugin-2.1.1-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.1-macos-arm64.tar.gz) |
-| macOS Intel | [upwork-agent-plugin-2.1.1-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.1-macos-x64.tar.gz) |
+| Windows x64 | [upwork-agent-plugin-2.1.2-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.2-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-linux-x64.tar.gz) |
+| macOS Apple Silicon | [upwork-agent-plugin-2.1.2-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-macos-arm64.tar.gz) |
+| macOS Intel | [upwork-agent-plugin-2.1.2-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-macos-x64.tar.gz) |
 
 Each archive contains the executable in `bin/`, its launchers, skills plugin and GPL license.
 `release.json` records the version, platform and source commit; corresponding source is available at
@@ -53,19 +53,19 @@ Do not move only the executable or overwrite existing profiles, saved sessions, 
 Verify SHA256 before running. On Windows, from your downloads folder:
 
 ```bash
-powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.1-windows-x64.zip -Algorithm SHA256"
+powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.2-windows-x64.zip -Algorithm SHA256"
 ```
 
 Compare the displayed hash with the matching `.sha256` file. On Linux:
 
 ```bash
-sha256sum -c upwork-agent-plugin-2.1.1-linux-x64.tar.gz.sha256
+sha256sum -c upwork-agent-plugin-2.1.2-linux-x64.tar.gz.sha256
 ```
 
 On macOS Apple Silicon (use the x64 filename on Intel):
 
 ```bash
-shasum -a 256 -c upwork-agent-plugin-2.1.1-macos-arm64.tar.gz.sha256
+shasum -a 256 -c upwork-agent-plugin-2.1.2-macos-arm64.tar.gz.sha256
 ```
 
 Alternatively, download the platform artifact from a successful exact-commit
@@ -106,7 +106,7 @@ mkdir -m 700 upwork-agent-plugin
 ```
 
 ```bash
-tar -xzf upwork-agent-plugin-2.1.1-linux-x64.tar.gz -C upwork-agent-plugin
+tar -xzf upwork-agent-plugin-2.1.2-linux-x64.tar.gz -C upwork-agent-plugin
 ```
 
 Unix archives preserve executable permissions. The optional launcher needs `sh`, not PowerShell:
@@ -345,7 +345,7 @@ varies; this is not a universal `codex plugin install` command. Standalone copyi
 
 ### Install the Cursor skill
 
-Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.1.zip).
+Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.2.zip).
 Copy `skills/upwork-project-selection/` to the workspace's `.agents/skills/upwork-project-selection/`.
 Preserve existing files, keep only one discovery copy, reopen the workspace and invoke `/upwork-project-selection`.
 
