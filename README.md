@@ -202,8 +202,15 @@ An authorization-server mismatch fails closed without deleting the original sess
 
 Proxy-side DNS prevents local destination lookups, but cannot guarantee a resolver in the proxy exit's
 country. Configure upstream DNS/DoH in your local proxy application. Browser DNS/routing/timezone,
-Claude model traffic and other MCP servers are outside this connector. No timezone header or field is
-created; UTC log/expiry timestamps are not fingerprint spoofing. Caller-owned MCP fields are forwarded unchanged.
+Claude model traffic and other MCP servers are outside this connector. The connector does not read the
+device timezone or create missing timezone hints. Before forwarding, existing device hints in MCP
+`params._meta` are normalized: `timezone`/`timeZone` become `UTC` (Greenwich, zero offset), and
+`timezone_offset_minutes`/`utcOffset`/`utc_offset`/`offsetMinutes` become numeric `0`. The same rule
+applies inside the optional `openai/userLocation` metadata object. Other fields, tool arguments,
+business dates/meeting timezones and incoming server messages stay unchanged; arbitrary custom nested
+metadata is not recursively rewritten. Windows and the sign-in browser timezone are not changed.
+This does not hide location inferred from IP, explicit geographic hints or user-provided text;
+UTC log/expiry timestamps alone are not timezone masking.
 
 ## Local proxy settings
 

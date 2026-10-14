@@ -1,3 +1,4 @@
+mod device_context;
 mod verification;
 
 use crate::{
@@ -98,8 +99,9 @@ where
                 biased;
                 count=read_bounded(&mut input,&mut line), if sends.len()<16=>{
                     if count?==0 {return Ok(());}
-                    let message:ClientJsonRpcMessage=serde_json::from_slice(&line)?;
+                    let mut message:ClientJsonRpcMessage=serde_json::from_slice(&line)?;
                     line.clear(); route.check()?;
+                    device_context::normalize(&mut message);
                     let ping_reply = match &message {
                         ClientJsonRpcMessage::Response(response) => pings.remove(&response.id),
                         ClientJsonRpcMessage::Error(error) => {

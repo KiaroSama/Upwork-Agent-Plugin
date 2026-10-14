@@ -24,6 +24,10 @@ _Avoid_: Upwork service port, OAuth callback port
 A job with supported buyer readiness, proven freelancer fit and acceptable business value, not merely a job the freelancer could win.
 _Avoid_: Guaranteed hire
 
+**Device timezone hint**:
+Optional information about the caller device's time zone, separate from a time or date the user intentionally supplies for their work.
+_Avoid_: Meeting timezone, Windows timezone setting
+
 **Blocked mode**:
 The selected state in which the local connector cannot contact Upwork or its authentication services.
 _Avoid_: Direct by default
