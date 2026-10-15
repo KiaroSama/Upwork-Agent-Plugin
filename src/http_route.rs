@@ -1,5 +1,6 @@
 mod event_limit;
 mod initialization;
+mod initialization_response;
 
 use crate::route::Route;
 use http::{HeaderName, HeaderValue};
@@ -95,22 +96,25 @@ impl StreamableHttpClient for McpRoute {
         headers: HashMap<HeaderName, HeaderValue>,
         max: usize,
     ) -> Result<StreamableHttpPostResponse, StreamableHttpError<Self::Error>> {
-        if self.verify_initialization
-            && matches!(&message, ClientJsonRpcMessage::Request(request)
-                if matches!(request.request, rmcp::model::ClientRequest::InitializeRequest(_)))
-        {
-            return self
-                .guarded(
-                    "post",
-                    initialization::post(&self.client, uri, message, session, auth, (headers, max)),
-                )
-                .await;
-        }
-        self.guarded(
-            "post",
-            self.client
-                .post_message_with_max_sse_event_size(uri, message, session, auth, headers, max),
-        )
+        let is_initialize = matches!(&message, ClientJsonRpcMessage::Request(request)
+            if matches!(request.request, rmcp::model::ClientRequest::InitializeRequest(_)));
+        self.guarded("post", async {
+            let response = if self.verify_initialization && is_initialize {
+                initialization::post(&self.client, uri, message, session, auth, (headers, max))
+                    .await?
+            } else {
+                self.client
+                    .post_message_with_max_sse_event_size(uri, message, session, auth, headers, max)
+                    .await?
+            };
+            if is_initialize {
+                // The SDK's SSE initializer ignores JSON-RPC errors. Select the
+                // first terminal reply before that filter, on both client paths.
+                initialization_response::first_terminal(response).await
+            } else {
+                Ok(response)
+            }
+        })
         .await
     }
     async fn delete_session(

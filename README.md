@@ -40,10 +40,10 @@ Git or local compilation is needed.
 
 | Machine | Download |
 | --- | --- |
-| Windows x64 | [upwork-agent-plugin-2.1.2-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-windows-x64.zip) |
-| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.2-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-linux-x64.tar.gz) |
-| macOS Apple Silicon | [upwork-agent-plugin-2.1.2-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-macos-arm64.tar.gz) |
-| macOS Intel | [upwork-agent-plugin-2.1.2-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.2-macos-x64.tar.gz) |
+| Windows x64 | [upwork-agent-plugin-2.1.3-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.3-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.3-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.3-linux-x64.tar.gz) |
+| macOS Apple Silicon | [upwork-agent-plugin-2.1.3-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.3-macos-arm64.tar.gz) |
+| macOS Intel | [upwork-agent-plugin-2.1.3-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.3-macos-x64.tar.gz) |
 
 Each archive contains the executable in `bin/`, its launchers, skills plugin and GPL license.
 `release.json` records the version, platform and source commit; corresponding source is available at
@@ -53,19 +53,19 @@ Do not move only the executable or overwrite existing profiles, saved sessions, 
 Verify SHA256 before running. On Windows, from your downloads folder:
 
 ```bash
-powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.2-windows-x64.zip -Algorithm SHA256"
+powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.3-windows-x64.zip -Algorithm SHA256"
 ```
 
 Compare the displayed hash with the matching `.sha256` file. On Linux:
 
 ```bash
-sha256sum -c upwork-agent-plugin-2.1.2-linux-x64.tar.gz.sha256
+sha256sum -c upwork-agent-plugin-2.1.3-linux-x64.tar.gz.sha256
 ```
 
 On macOS Apple Silicon (use the x64 filename on Intel):
 
 ```bash
-shasum -a 256 -c upwork-agent-plugin-2.1.2-macos-arm64.tar.gz.sha256
+shasum -a 256 -c upwork-agent-plugin-2.1.3-macos-arm64.tar.gz.sha256
 ```
 
 Alternatively, download the platform artifact from a successful exact-commit
@@ -106,7 +106,7 @@ mkdir -m 700 upwork-agent-plugin
 ```
 
 ```bash
-tar -xzf upwork-agent-plugin-2.1.2-linux-x64.tar.gz -C upwork-agent-plugin
+tar -xzf upwork-agent-plugin-2.1.3-linux-x64.tar.gz -C upwork-agent-plugin
 ```
 
 Unix archives preserve executable permissions. The optional launcher needs `sh`, not PowerShell:
@@ -345,7 +345,7 @@ varies; this is not a universal `codex plugin install` command. Standalone copyi
 
 ### Install the Cursor skill
 
-Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.2.zip).
+Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.3.zip).
 Copy `skills/upwork-project-selection/` to the workspace's `.agents/skills/upwork-project-selection/`.
 Preserve existing files, keep only one discovery copy, reopen the workspace and invoke `/upwork-project-selection`.
 
@@ -451,7 +451,11 @@ The official [RMCP SDK](https://github.com/modelcontextprotocol/rust-sdk) suppli
 machines; [Reqwest](https://github.com/seanmonstar/reqwest) supplies explicitly configured HTTP/proxy clients.
 Both OAuth redirect policies use routed clients; SDK defaults are never used for outbound requests.
 The relay preserves JSON-RPC messages rather than enumerating/hardcoding Upwork tools. SDK debug tracing
-is deliberately disabled because vendor events can expose OAuth secrets.
+is deliberately disabled because vendor events can expose OAuth secrets. During initialization, the first
+terminal SSE result or error is preserved for both manual sign-in and the normal bridge. An error cannot
+be replaced by a later success; no readiness notification is sent after failed manual verification.
+Selection does not wait for stream EOF, buffer the entire stream or replay the request, and remains
+inside the selected-route cancellation guard.
 
 ## Optional source build (developers only)
 
@@ -486,7 +490,12 @@ Packaging uses an explicit allowlist, verifies extracted binaries from a fresh s
 and unrelated CWD without a launcher, and checks generated host configuration, blocked startup, version,
 settings and SHA256. Only green exact-commit assets are released; private profiles, credentials, logs,
 caches and test keys are excluded. Artifacts expire after 14 days; Releases are durable.
-Dependabot checks Cargo/actions and pull requests receive dependency review.
+Dependabot checks Cargo/actions and pull requests receive dependency review. Linux CI also runs the
+retained native CLI and initialization probes against its checksum-verified packaged executable:
+272 CLI assertions, 30 sign-in contracts, 20 raw/framing cases and eight ordering cases for each entry
+point. The Python fixtures under `tests/native/` use isolated loopback TLS and child-only trust, never
+real account state. Each probe has a 180-second controller deadline; synthetic keys and binaries are
+removed, while sanitized JSON receipts and UTC diagnostic logs are retained as verification artifacts.
 
 Controlled localhost fixtures cover HTTP/HTTPS/SOCKS authentication/DNS, refusal/no fallback,
 OAuth exchange/refresh/CSRF/issuer rejection, relay/route changes, malformed config/import, atomic writes,
