@@ -30,6 +30,7 @@ url = "2"
 axum = "0.8"
 base64 = "0.23"
 tempfile = "3"
+tokio = { version = "1", features = ["test-util"] }
 tokio-rustls = "0.26"
 
 [lints.rust]

@@ -1,3 +1,5 @@
+mod local_callback;
+
 use crate::{
     credentials::Store,
     error::{Error, Result},
@@ -9,11 +11,6 @@ use rmcp::transport::auth::{
     OAuthHttpClientError, OAuthHttpClientFuture, OAuthHttpRedirectPolicy, OAuthHttpRequest,
 };
 use std::{sync::Arc, time::Duration};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpListener,
-};
-use url::Url;
 
 #[derive(Clone)]
 pub struct OAuthRoute {
@@ -117,27 +114,8 @@ pub async fn sign_in(
     let resolution = manager.resolve_metadata().await?;
     manager.set_metadata(resolution.metadata);
     let mut client = store.client_registration()?;
-    let redirect = client
-        .as_ref()
-        .and_then(|c| c.get("redirect_uris"))
-        .and_then(|v| v.as_array())
-        .and_then(|v| v.first())
-        .and_then(|v| v.as_str())
-        .map(str::to_owned);
-    let port = redirect
-        .as_ref()
-        .and_then(|s| Url::parse(s).ok())
-        .and_then(|u| u.port())
-        .unwrap_or(0);
-    let listener = TcpListener::bind(("127.0.0.1", port)).await?;
-    let redirect = redirect.unwrap_or(format!(
-        "http://127.0.0.1:{}/oauth/callback",
-        listener.local_addr()?.port()
-    ));
-    let target = Url::parse(&redirect).map_err(|_| Error::Safe("Invalid local callback."))?;
-    if target.scheme() != "http" || !matches!(target.host_str(), Some("localhost" | "127.0.0.1")) {
-        return Err(Error::Safe("Callback must be local to this computer."));
-    }
+    let saved_redirect = local_callback::stored_redirect(client.as_ref())?;
+    let (listener, redirect, target) = local_callback::bind(saved_redirect).await?;
     if client.is_none() {
         let config = manager
             .register_client("Upwork Native Connector", &redirect, &[])
@@ -176,11 +154,13 @@ pub async fn sign_in(
     tokio::time::timeout(Duration::from_secs(300),async {
         loop {
             let (mut socket,_)=listener.accept().await?;
-            let mut bytes=vec![]; let mut byte=[0];
-            while !bytes.ends_with(b"\r\n\r\n") && bytes.len()<8192 {
-                if !matches!(tokio::time::timeout(Duration::from_secs(5),socket.read_exact(&mut byte)).await,Ok(Ok(_))){break;}
-                bytes.push(byte[0]);
-            }
+            let bytes = match local_callback::read_headers(&mut socket).await {
+                Ok(bytes) => bytes,
+                Err(_) => {
+                    log.event("WARNING", "Local callback headers rejected or timed out; private parameters suppressed.");
+                    continue;
+                }
+            };
             let params=crate::callback::parameters(&bytes,&target);
             let result=if let Ok(params)=params {
                 if let (Some(code),Some(state))=(params.get("code"),params.get("state")) {
@@ -190,7 +170,7 @@ pub async fn sign_in(
             let success=result.is_ok();
             let body=if success {"Callback received. Wait for the terminal to verify the session."}else{"Authorization callback rejected. Return to the sign-in terminal."};
             let response=format!("HTTP/1.1 {}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",if success{"200 OK"}else{"400 Bad Request"},body.len());
-            let _=socket.write_all(response.as_bytes()).await;
+            local_callback::write_response(&mut socket, response.as_bytes()).await;
             if success {return Ok::<(),Error>(());}
             log.event("WARNING","Authorization callback rejected; private parameters suppressed.");
         }
