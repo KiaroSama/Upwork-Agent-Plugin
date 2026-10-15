@@ -108,11 +108,7 @@ fn owned_registration(root: &Path, old: &Value, entry: &Value) -> bool {
             .is_some_and(|path| same_or_exact(Path::new(path), &root.join("src/bridge.ts")))
 }
 fn snapshot(path: &Path) -> Result<Option<Vec<u8>>> {
-    match fs::read(path) {
-        Ok(bytes) => Ok(Some(bytes)),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(error.into()),
-    }
+    storage::read_optional(path)
 }
 fn object(bytes: &Option<Vec<u8>>) -> Result<Value> {
     let value: Value = match bytes {

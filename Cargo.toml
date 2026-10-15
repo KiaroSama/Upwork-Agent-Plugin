@@ -26,6 +26,9 @@ tokio = { version = "1", features = ["rt", "macros", "net", "io-util", "io-std",
 uuid = { version = "1", features = ["v4"] }
 url = "2"
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 axum = "0.8"
 base64 = "0.23"

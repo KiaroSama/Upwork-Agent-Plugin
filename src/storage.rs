@@ -1,3 +1,7 @@
+mod state_input;
+
+pub use state_input::{MAX_STATE_BYTES, read_optional};
+
 use crate::error::{Error, Result};
 use serde::Serialize;
 use std::{
@@ -65,6 +69,7 @@ pub fn atomic_json(path: &Path, value: &impl Serialize) -> Result<()> {
     atomic_bytes(path, &bytes)
 }
 pub fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
+    state_input::validate_length(bytes.len() as u64)?;
     let parent = path.parent().ok_or(Error::Safe("Invalid state path."))?;
     fs::create_dir_all(parent)?;
     let temp = parent.join(format!("{}.tmp", uuid::Uuid::new_v4()));

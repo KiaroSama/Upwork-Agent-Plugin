@@ -12,7 +12,6 @@ use rmcp::transport::auth::{
 };
 use serde_json::Value;
 use std::{
-    fs,
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -123,11 +122,9 @@ impl Store {
     }
 }
 pub fn optional_json(path: &Path) -> Result<Option<Value>> {
-    match fs::read_to_string(path) {
-        Ok(text) => Ok(Some(serde_json::from_str(&text)?)),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(e) => Err(e.into()),
-    }
+    storage::read_optional(path)?
+        .map(|bytes| serde_json::from_slice(&bytes).map_err(Error::from))
+        .transpose()
 }
 fn auth_error() -> AuthError {
     AuthError::CredentialStoreError(

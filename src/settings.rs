@@ -4,7 +4,7 @@ use crate::{
     storage::{Lock, atomic_json},
 };
 use serde::{Deserialize, Serialize};
-use std::{fs, path::Path};
+use std::path::Path;
 
 const LOCAL_NAME: &str = "local-proxy";
 const LOCAL_LABEL: &str = "Local proxy (settings)";
@@ -31,12 +31,10 @@ impl LocalProxy {
     }
 }
 pub fn read(root: &Path) -> Result<LocalProxy> {
-    let text = match fs::read_to_string(root.join("config/local-proxy.json")) {
-        Ok(text) => text,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(LocalProxy::default()),
-        Err(e) => return Err(e.into()),
+    let Some(bytes) = crate::storage::read_optional(&root.join("config/local-proxy.json"))? else {
+        return Ok(LocalProxy::default());
     };
-    let value: LocalProxy = serde_json::from_str(&text)?;
+    let value: LocalProxy = serde_json::from_slice(&bytes)?;
     value.validate()?;
     Ok(value)
 }

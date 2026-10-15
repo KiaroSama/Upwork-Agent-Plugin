@@ -3,7 +3,7 @@ use crate::{
     storage::{Lock, atomic_json},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, fs, path::Path};
+use std::{collections::HashSet, path::Path};
 use url::Url;
 
 #[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -143,12 +143,10 @@ pub fn proxy_url(raw: &str) -> Result<Url> {
     Ok(url)
 }
 pub fn read(path: &Path) -> Result<Connections> {
-    let text = match fs::read_to_string(path) {
-        Ok(s) => s,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Connections::default()),
-        Err(e) => return Err(e.into()),
+    let Some(bytes) = crate::storage::read_optional(path)? else {
+        return Ok(Connections::default());
     };
-    let c: Connections = serde_json::from_str(&text)?;
+    let c: Connections = serde_json::from_slice(&bytes)?;
     c.validate()?;
     Ok(c)
 }
