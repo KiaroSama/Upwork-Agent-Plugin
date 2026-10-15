@@ -1,7 +1,10 @@
 name: Dependency review
 on:
-  pull_request:
-    branches: [main]
+  workflow_call:
+    inputs:
+      base_ref:
+        required: true
+        type: string
 permissions:
   contents: read
 jobs:
@@ -15,3 +18,5 @@ jobs:
       - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: high
+          base-ref: ${{ inputs.base_ref }}
+          head-ref: ${{ github.sha }}

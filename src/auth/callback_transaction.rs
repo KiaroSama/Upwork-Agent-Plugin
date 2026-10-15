@@ -263,6 +263,33 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn refresh_waits_for_manual_exchange_and_reloads_its_saved_token() {
+        let (_root, store, http, session, state) = fixture(true, false).await;
+        let refresh_manager = manager(store.clone(), http.clone()).await;
+        let mut callback = Box::pin(finish(
+            &store,
+            &session,
+            "synthetic-code",
+            &state,
+            Some("https://fixture.invalid"),
+        ));
+        assert!(futures::poll!(&mut callback).is_pending());
+        assert_eq!(http.calls.load(Ordering::SeqCst), 1);
+        let mut refresh = Box::pin(refresh_manager.refresh_token());
+        assert!(futures::poll!(&mut refresh).is_pending());
+        assert_eq!(http.calls.load(Ordering::SeqCst), 1);
+        http.release.add_permits(1);
+        callback.await.unwrap();
+        tokio::time::timeout(Duration::from_secs(1), refresh)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(http.calls.load(Ordering::SeqCst), 2);
+        let saved: Value = serde_json::from_slice(&fs::read(store.path()).unwrap()).unwrap();
+        assert!(saved["token_response"]["refresh_token"] == "synthetic-refresh-2");
+    }
+
+    #[tokio::test]
     async fn concurrent_sdk_refreshes_wait_and_reload_the_rotated_token() {
         let (_root, store, http, session, _state) = fixture(true, false).await;
         let second_manager = manager(store.clone(), http.clone()).await;

@@ -1,10 +1,11 @@
 name: CI
 on:
-  push:
-    branches: [main, chore/binary-releases]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Reviewed base commit for dependency comparison
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -177,3 +178,13 @@ jobs:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target
           HOME: ${{ github.workspace }}/.ci-cache/home
           USERPROFILE: ${{ github.workspace }}/.ci-cache/home
+
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+    uses: ./.github/workflows/codeql.yml
+  dependency-review:
+    uses: ./.github/workflows/dependency-review.yml
+    with:
+      base_ref: ${{ inputs.base_ref }}

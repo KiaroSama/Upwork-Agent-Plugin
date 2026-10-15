@@ -34,7 +34,11 @@ class Handler(protocol.Handler):
             with self.server.counter_lock:
                 self.server.refresh_count += 1
                 index = self.server.refresh_count
-            if index == 1:
+            if self.server.hold_manual:
+                self.server.refresh_started.set()
+                if fields.get('refresh_token') != ['synthetic-manual-refresh']:
+                    self.server.rotated_token_ok = False
+            elif index == 1:
                 self.server.refresh_started.set()
                 if not self.server.release_refresh.wait(12):
                     self.reply(None, 503)
@@ -44,6 +48,9 @@ class Handler(protocol.Handler):
             self.reply({'access_token': f'synthetic-refreshed-{index}', 'token_type': 'Bearer', 'expires_in': 3600, 'refresh_token': f'synthetic-refresh-{index}'})
         elif fields.get('grant_type') == ['authorization_code']:
             self.server.manual_exchange.set()
+            if self.server.hold_manual and not self.server.release_refresh.wait(12):
+                self.reply(None, 503)
+                return
             self.reply({'access_token': 'synthetic-manual-session', 'token_type': 'Bearer', 'expires_in': 3600, 'refresh_token': 'synthetic-manual-refresh'})
         else:
             self.reply(None, 400)
@@ -58,6 +65,7 @@ class Fixture(protocol.Fixture):
         self.counter_lock = threading.Lock()
         self.refresh_count = 0
         self.rotated_token_ok = True
+        self.hold_manual = False
 
 class Child:
     def __init__(self, binary: Path, root: Path, env: dict, command: str):
@@ -118,6 +126,7 @@ def run_case(binary: Path, certificates: Path, work: Path, mode: str) -> dict:
             reserved.bind(('127.0.0.1', 0))
             callback_port = reserved.getsockname()[1]
         server = Fixture(certificates)
+        server.hold_manual = mode == 'refresh_during_manual'
         thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': .05}, daemon=True)
         thread.start()
         (root/'config/connections.json').write_text(json.dumps({'version':1,'mode':'proxy','selected':'fixture','profiles':[{'name':'fixture','url':f'http://127.0.0.1:{server.server_port}'}]}), encoding='utf-8')
@@ -136,14 +145,16 @@ def run_case(binary: Path, certificates: Path, work: Path, mode: str) -> dict:
         callback_ok = threading.Event()
         receipt = {'case':mode}
         try:
-            first = Child(binary, root, env, 'bridge')
+            first = Child(binary, root, env, 'sign-in' if server.hold_manual else 'bridge')
             children.append(first)
-            first.initialize()
-            if not server.refresh_started.wait(8):
-                raise RuntimeError('Initial refresh did not reach the synthetic barrier.')
-            if mode == 'manual_during_refresh':
-                second = Child(binary, root, env, 'sign-in')
-                children.append(second)
+            if not server.hold_manual:
+                first.initialize()
+                if not server.refresh_started.wait(8):
+                    raise RuntimeError('Initial refresh did not reach the synthetic barrier.')
+            if mode in {'manual_during_refresh', 'refresh_during_manual'}:
+                second = first if server.hold_manual else Child(binary, root, env, 'sign-in')
+                if second is not first:
+                    children.append(second)
                 line = second.matching_line(lambda text: text.startswith('https://'))
                 if line is None:
                     raise RuntimeError('Synthetic sign-in did not produce an authorization link.')
@@ -166,8 +177,16 @@ def run_case(binary: Path, certificates: Path, work: Path, mode: str) -> dict:
                         connection.close()
                 callback_thread = threading.Thread(target=callback, daemon=True)
                 callback_thread.start()
-                receipt['manual_exchanged_before_refresh_release'] = server.manual_exchange.wait(.5)
-                if receipt['manual_exchanged_before_refresh_release']:
+                if server.hold_manual:
+                    if not server.manual_exchange.wait(8):
+                        raise RuntimeError('Manual exchange did not reach the synthetic barrier.')
+                    bridge = Child(binary, root, env, 'bridge')
+                    children.append(bridge)
+                    bridge.initialize()
+                    receipt['refresh_exchanged_before_manual_release'] = server.refresh_started.wait(.5)
+                else:
+                    receipt['manual_exchanged_before_refresh_release'] = server.manual_exchange.wait(.5)
+                if not server.hold_manual and receipt['manual_exchanged_before_refresh_release']:
                     callback_thread.join(timeout=9)
                     second.process.wait(timeout=8)
                 server.release_refresh.set()
@@ -176,9 +195,11 @@ def run_case(binary: Path, certificates: Path, work: Path, mode: str) -> dict:
                 receipt['callback_ok'] = callback_ok.is_set()
                 receipt['manual_exit_success'] = second.process.returncode == 0
                 receipt['completion_claimed'] = any('Sign-in complete.' in text for text in second.records)
-                receipt['first_bridge_initialized'] = first.initialized()
+                receipt['first_bridge_initialized'] = (bridge if server.hold_manual else first).initialized()
+                if server.hold_manual:
+                    receipt['rotated_token_reloaded'] = server.rotated_token_ok
                 saved = json.loads((root/'.state/rust/credentials.json').read_text(encoding='utf-8'))
-                receipt['manual_session_preserved'] = saved['token_response']['access_token'] == 'synthetic-manual-session'
+                receipt['manual_session_preserved'] = saved['token_response']['access_token'] == ('synthetic-refreshed-1' if server.hold_manual else 'synthetic-manual-session')
             else:
                 second = Child(binary, root, env, 'bridge')
                 children.append(second)
@@ -220,9 +241,9 @@ def main():
             certs = Path(tmp)
             protocol.certificates(certs)
             results = [run_case(args.binary.resolve(), certs, args.output.parent, name)
-                       for name in ['manual_during_refresh','concurrent_refresh']]
+                       for name in (['manual_during_refresh','concurrent_refresh'] if args.expect_baseline else ['manual_during_refresh','concurrent_refresh','refresh_during_manual'])]
         args.output.write_text(json.dumps(results, indent=2)+'\n', encoding='utf-8')
-        manual, refresh = results
+        manual, refresh = results[:2]
         common = manual['callback_ok'] and manual['manual_exit_success'] and manual['completion_claimed'] and manual['first_bridge_initialized'] and refresh['first_bridge_initialized']
         if args.expect_baseline:
             passed = (common and manual['manual_exchanged_before_refresh_release'] and not manual['manual_session_preserved']
@@ -232,11 +253,18 @@ def main():
             passed = (common and not manual['manual_exchanged_before_refresh_release'] and manual['manual_session_preserved']
                       and not refresh['second_exited_while_first_refresh_active'] and refresh['second_bridge_initialized']
                       and refresh['rotated_token_reloaded'] and refresh['refresh_requests'] == 2)
+        if not args.expect_baseline:
+            reverse = results[2]
+            passed = (passed and reverse['callback_ok'] and reverse['manual_exit_success']
+                      and reverse['completion_claimed'] and reverse['first_bridge_initialized']
+                      and not reverse['refresh_exchanged_before_manual_release']
+                      and reverse['rotated_token_reloaded'] and reverse['manual_session_preserved']
+                      and reverse['refresh_requests'] == 1)
         LOG.warning('Synthetic coordination evidence does not exercise a live Upwork account.')
         if not passed:
             LOG.error('Coordination contract failed; inspect only the sanitized boolean receipt.')
             raise SystemExit(1)
-        LOG.info('Manual-session overwrite reproduced; the existing concurrent-refresh fix still passes.' if args.expect_baseline else 'Both native coordination contracts passed.')
+        LOG.info('Manual-session overwrite reproduced; the existing concurrent-refresh fix still passes.' if args.expect_baseline else 'All native coordination contracts passed.')
     except Exception:
         LOG.error('Bounded fixture failed; no successful verification is claimed.')
         raise
