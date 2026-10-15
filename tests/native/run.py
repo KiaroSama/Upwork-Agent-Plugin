@@ -19,7 +19,7 @@ EXTENDED = 'valid_json_control mixed_error_json mixed_error_sse mixed_error_null
 
 def worker():
     script, output = sys.argv[2:4]
-    assert script in {'cli_probe.py', 'protocol_probe.py', 'extended_protocol_probe.py', 'terminal_sse_probe.py'}
+    assert script in {'cli_probe.py', 'protocol_probe.py', 'extended_protocol_probe.py', 'terminal_sse_probe.py', 'credential_coordination_probe.py'}
     # -I excludes ambient import paths; only reviewed, tracked sibling fixtures are added.
     sys.path.insert(0, str(SCRIPTS))
     sys.dont_write_bytecode = True
@@ -59,7 +59,8 @@ def main():
     jobs = [('cli_probe.py', 'cli', []), ('protocol_probe.py', 'protocol', ['--assert-fixed']),
             ('extended_protocol_probe.py', 'extended', ['--cases', *EXTENDED]),
             ('terminal_sse_probe.py', 'sign-in', ['--mode', 'sign-in']),
-            ('terminal_sse_probe.py', 'bridge', ['--mode', 'bridge'])]
+            ('terminal_sse_probe.py', 'bridge', ['--mode', 'bridge']),
+            ('credential_coordination_probe.py', 'credential-coordination', [])]
     results = []
     for script, name, extra in jobs:
         receipt = output / (name + '.json')

@@ -1,3 +1,4 @@
+mod callback_transaction;
 mod local_callback;
 
 use crate::{
@@ -164,7 +165,7 @@ pub async fn sign_in(
             let params=crate::callback::parameters(&bytes,&target);
             let result=if let Ok(params)=params {
                 if let (Some(code),Some(state))=(params.get("code"),params.get("state")) {
-                    session.handle_callback_with_issuer(code,state,params.get("iss").map(String::as_str)).await.map(|_|())
+                    callback_transaction::finish(&store, &session, code, state, params.get("iss").map(String::as_str)).await
                 } else {Err(rmcp::transport::auth::AuthError::InternalError("Invalid callback.".into()))}
             } else {Err(rmcp::transport::auth::AuthError::InternalError("Invalid callback.".into()))};
             let success=result.is_ok();
