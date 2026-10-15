@@ -1,7 +1,9 @@
+mod refresh_lock;
+
 use crate::{
     ENDPOINT,
     error::{Error, Result},
-    storage::{self, Lock},
+    storage,
 };
 use async_trait::async_trait;
 use md5::{Digest, Md5};
@@ -149,8 +151,7 @@ impl CredentialStore for Store {
     async fn acquire_refresh_guard(
         &self,
     ) -> std::result::Result<Option<CredentialRefreshGuard>, AuthError> {
-        let lock =
-            Lock::acquire(&self.root.join(".state/rust/refresh.json")).map_err(|_| auth_error())?;
+        let lock = refresh_lock::acquire(&self.root.join(".state/rust/refresh.json")).await?;
         Ok(Some(CredentialRefreshGuard::new(lock)))
     }
 }
