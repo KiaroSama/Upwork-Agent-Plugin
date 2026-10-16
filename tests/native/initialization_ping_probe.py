@@ -32,19 +32,23 @@ class Handler(protocol.Handler):
                         and request.get('result') == {}
                         and self.headers.get('Mcp-Session-Id') == 'gated-fixture'
                         and self.headers.get('Authorization') == 'Bearer disposable-fixture-token'
-                        and self.headers.get('Mcp-Protocol-Version') == '2025-11-25')
+                        and (self.headers.get('Mcp-Protocol-Version') in (None, '2025-03-26')
+                             if self.server.case == 'fallback' else self.headers.get('Mcp-Protocol-Version') is None))
             self.server.valid_replies &= accepted
             self.reply(None, 500 if self.server.case == 'reply_failure' else 202 if accepted else 400)
             self.server.answered.set()
             return
         if method == 'notifications/initialized':
+            negotiated = '2025-03-26' if self.server.case == 'fallback' else '2025-11-25'
+            self.server.ready_version_ok &= self.headers.get('Mcp-Protocol-Version') == negotiated
             self.server.initialized += 1
             return self.reply(None, 202)
         if method != 'initialize':
             return self.reply(None, 400)
         self.server.initialize_requests += 1
         terminal = {'jsonrpc':'2.0','id':request['id'],'result':{
-            'protocolVersion':'2025-11-25','capabilities':{},'serverInfo':{'name':'gated','version':'1'}}}
+            'protocolVersion':'2025-03-26' if self.server.case == 'fallback' else '2025-11-25',
+            'capabilities':{},'serverInfo':{'name':'gated','version':'1'}}}
         self.send_response(200)
         self.send_header('Content-Type', 'text/event-stream')
         self.send_header('Mcp-Session-Id', 'gated-fixture')
@@ -85,6 +89,7 @@ class Fixture(protocol.Fixture):
         self.valid_replies = True
         self.gate_expired = False
         self.initialize_requests = 0
+        self.ready_version_ok = True
 
 def run(binary, ca, output, mode, case):
     with tempfile.TemporaryDirectory(prefix='ping-case-', dir=output) as directory:
@@ -109,7 +114,8 @@ def run(binary, ca, output, mode, case):
                               else result['first_terminal_message'] == 'result')
             passed = (application_ok == positive and server.valid_replies
                       and server.ping_replies == expected_pings and server.initialize_requests == 1
-                      and not result['controller_timeout'] and not result['private_marker_in_stderr'])
+                      and not result['controller_timeout'] and not result['private_marker_in_stderr']
+                      and server.ready_version_ok)
             if mode == 'sign-in':
                 passed &= result['callback_sent'] and server.initialized == int(positive) and (result['returncode'] == 0) == positive
             if case == 'ping_then_error' and mode == 'bridge':
@@ -117,7 +123,8 @@ def run(binary, ca, output, mode, case):
             result.update(mode=mode, case=case, ping_replies=server.ping_replies,
                           valid_reply_ids_and_headers=server.valid_replies,
                           initialize_requests=server.initialize_requests, initialized_sent=server.initialized,
-                          gate_expired=server.gate_expired, passed=bool(passed))
+                          gate_expired=server.gate_expired, negotiated_ready_header_valid=server.ready_version_ok,
+                          passed=bool(passed))
             LOG.info('Mode=%s case=%s ping_replies=%s passed=%s', mode, case, server.ping_replies, passed)
             return result
         finally:
@@ -131,10 +138,11 @@ def main():
     parser.add_argument('--binary', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--expect-baseline', action='store_true')
+    parser.add_argument('--expect-offered-version', action='store_true')
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] [initialization-ping] %(message)s')
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    cases = ['numeric','no_ping'] if args.expect_baseline else ['numeric','string','numeric_string','multiple','log_first','no_ping','ping_then_error','reply_failure','overflow']
+    cases = ['fallback','no_ping'] if args.expect_offered_version else ['numeric','no_ping'] if args.expect_baseline else ['numeric','string','numeric_string','multiple','log_first','no_ping','ping_then_error','reply_failure','overflow','fallback']
     results = []
     with tempfile.TemporaryDirectory(prefix='ping-certs-', dir=args.output.parent) as directory:
         ca = Path(directory)
@@ -147,10 +155,16 @@ def main():
     LOG.warning('This fixture is not a live Upwork compatibility test.')
     accepted = all((not row['passed'] and row['gate_expired'] and row['ping_replies'] == 0)
                    if args.expect_baseline and row['case'] == 'numeric' else row['passed'] for row in results)
+    if args.expect_offered_version:
+        accepted = all((not row['passed'] and not row['valid_reply_ids_and_headers']
+                        and row['ping_replies'] == 1 and not row['controller_timeout'])
+                       if row['case'] == 'fallback' else row['passed'] for row in results)
     if not accepted:
         LOG.error('Gated initialization contract failed; no unexecuted case is counted.')
         raise SystemExit(1)
-    LOG.info('Baseline ping defect reproduced in both paths.' if args.expect_baseline else 'All gated native ping contracts passed.')
+    LOG.info('Offered-version incompatibility reproduced in both paths.' if args.expect_offered_version
+             else 'Baseline ping defect reproduced in both paths.' if args.expect_baseline
+             else 'All gated native ping contracts passed.')
 
 if __name__ == '__main__':
     try:

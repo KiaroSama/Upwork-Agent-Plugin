@@ -15,7 +15,6 @@ pub(super) struct Context {
     pub session: Option<Arc<str>>,
     pub auth: Option<String>,
     pub headers: HashMap<HeaderName, HeaderValue>,
-    pub protocol: String,
 }
 
 fn invalid(message: &'static str) -> Failure {
@@ -30,9 +29,9 @@ impl Context {
         for (name, value) in &self.headers {
             request = request.header(name, value);
         }
-        request = request
-            .header("accept", "application/json, text/event-stream")
-            .header("mcp-protocol-version", &self.protocol);
+        // Until InitializeResult arrives, the offered version is not negotiated.
+        // Preserve an explicitly supplied version header, but never invent one.
+        request = request.header("accept", "application/json, text/event-stream");
         if let Some(auth) = &self.auth {
             request = request.bearer_auth(auth);
         }

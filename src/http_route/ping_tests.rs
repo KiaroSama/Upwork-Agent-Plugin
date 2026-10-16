@@ -18,7 +18,13 @@ use std::{
 };
 use tokio::sync::{Notify, Semaphore};
 
-async fn exchange(strict: bool, ids: Vec<Value>, reject: bool, block: bool) -> (bool, Vec<Value>) {
+async fn exchange(
+    strict: bool,
+    ids: Vec<Value>,
+    reject: bool,
+    block: bool,
+    explicit_protocol: bool,
+) -> (bool, Vec<Value>) {
     std::fs::create_dir_all(".ci-work").unwrap();
     let root = tempfile::tempdir_in(".ci-work").unwrap();
     let path = root.path().join("config/connections.json");
@@ -47,7 +53,10 @@ async fn exchange(strict: bool, ids: Vec<Value>, reject: bool, block: bool) -> (
                 assert_eq!(headers.get("mcp-session-id").unwrap(), "ping-session");
                 assert_eq!(headers.get("authorization").unwrap(), "Bearer synthetic-token");
                 assert_eq!(headers.get("x-fixture").unwrap(), "preserved");
-                assert_eq!(headers.get("mcp-protocol-version").unwrap(), "2025-11-25");
+                assert_eq!(headers.get_all("mcp-protocol-version").iter().count(), usize::from(explicit_protocol));
+                if explicit_protocol {
+                    assert_eq!(headers.get("mcp-protocol-version").unwrap(), "2025-11-25");
+                }
                 assert_eq!(message["result"], json!({}));
                 record.lock().unwrap().push(message["id"].clone());
                 if block {
@@ -89,10 +98,16 @@ async fn exchange(strict: bool, ids: Vec<Value>, reject: bool, block: bool) -> (
     let request = serde_json::from_value(json!({"jsonrpc":"2.0","id":1,"method":"initialize","params":{
         "protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"fixture","version":"1"}
     }})).unwrap();
-    let headers = HashMap::from([(
+    let mut headers = HashMap::from([(
         HeaderName::from_static("x-fixture"),
         HeaderValue::from_static("preserved"),
     )]);
+    if explicit_protocol {
+        headers.insert(
+            HeaderName::from_static("mcp-protocol-version"),
+            HeaderValue::from_static("2025-11-25"),
+        );
+    }
     let outcome = tokio::time::timeout(
         Duration::from_secs(3),
         client.post_message_with_max_sse_event_size(
@@ -130,7 +145,7 @@ async fn gated_ping_ids_and_session_auth_headers_are_preserved_in_both_paths() {
             vec![json!("007")],
             vec![json!(1), json!("1")],
         ] {
-            let (ok, actual) = exchange(strict, ids.clone(), false, false).await;
+            let (ok, actual) = exchange(strict, ids.clone(), false, false, false).await;
             assert!(ok);
             assert_eq!(actual, ids);
         }
@@ -140,7 +155,7 @@ async fn gated_ping_ids_and_session_auth_headers_are_preserved_in_both_paths() {
 #[tokio::test]
 async fn rejected_ping_reply_fails_without_initialization_or_control_replay() {
     for strict in [false, true] {
-        let (ok, actual) = exchange(strict, vec![json!("rejected")], true, false).await;
+        let (ok, actual) = exchange(strict, vec![json!("rejected")], true, false, false).await;
         assert!(!ok);
         assert_eq!(actual, vec![json!("rejected")]);
     }
@@ -149,8 +164,14 @@ async fn rejected_ping_reply_fails_without_initialization_or_control_replay() {
 #[tokio::test]
 async fn control_ping_budget_is_finite_in_both_paths() {
     for strict in [false, true] {
-        let (ok, actual) =
-            exchange(strict, (0..17).map(|id| json!(id)).collect(), false, false).await;
+        let (ok, actual) = exchange(
+            strict,
+            (0..17).map(|id| json!(id)).collect(),
+            false,
+            false,
+            false,
+        )
+        .await;
         assert!(!ok);
         assert_eq!(actual.len(), 16);
     }
@@ -159,8 +180,17 @@ async fn control_ping_budget_is_finite_in_both_paths() {
 #[tokio::test]
 async fn block_cancels_a_stalled_control_response_in_both_paths() {
     for strict in [false, true] {
-        let (ok, actual) = exchange(strict, vec![json!("blocked")], false, true).await;
+        let (ok, actual) = exchange(strict, vec![json!("blocked")], false, true, false).await;
         assert!(!ok);
         assert_eq!(actual, vec![json!("blocked")]);
+    }
+}
+
+#[tokio::test]
+async fn explicitly_supplied_protocol_header_is_preserved_once() {
+    for strict in [false, true] {
+        let (ok, actual) = exchange(strict, vec![json!("explicit")], false, false, true).await;
+        assert!(ok);
+        assert_eq!(actual, vec![json!("explicit")]);
     }
 }

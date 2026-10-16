@@ -102,31 +102,13 @@ impl StreamableHttpClient for McpRoute {
         let is_initialize = matches!(&message, ClientJsonRpcMessage::Request(request)
             if matches!(request.request, rmcp::model::ClientRequest::InitializeRequest(_)));
         self.guarded("post", async {
-            let context = if is_initialize {
-                let value = serde_json::to_value(&message).map_err(|_| {
-                    StreamableHttpError::UnexpectedServerResponse(Cow::Borrowed(
-                        "Cannot encode initialization context.",
-                    ))
-                })?;
-                let protocol = value["params"]["protocolVersion"]
-                    .as_str()
-                    .ok_or_else(|| {
-                        StreamableHttpError::UnexpectedServerResponse(Cow::Borrowed(
-                            "Initialization protocol missing.",
-                        ))
-                    })?
-                    .to_owned();
-                Some(initialization_control::Context {
-                    client: self.client.clone(),
-                    uri: uri.clone(),
-                    session: session.clone(),
-                    auth: auth.clone(),
-                    headers: headers.clone(),
-                    protocol,
-                })
-            } else {
-                None
-            };
+            let context = is_initialize.then(|| initialization_control::Context {
+                client: self.client.clone(),
+                uri: uri.clone(),
+                session: session.clone(),
+                auth: auth.clone(),
+                headers: headers.clone(),
+            });
             let exchange = async {
                 let response = if self.verify_initialization && is_initialize {
                     initialization::post(&self.client, uri, message, session, auth, (headers, max))
