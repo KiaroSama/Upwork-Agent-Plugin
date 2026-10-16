@@ -86,6 +86,9 @@ jobs:
           fallback: none
       - name: Validate source inventory and UTF-8
         run: ./scripts/check.ps1
+      - name: Verify release build policy and failed-publication boundaries
+        timeout-minutes: 2
+        run: ./scripts/check-build-policy.ps1
       - name: Check formatting
         run: ./scripts/verify.ps1 -CargoArgs @('fmt', '--check')
       - name: Check Rust lints
@@ -151,6 +154,7 @@ jobs:
           path: |
             target/nextest/ci/junit.xml
             .ci-work/rust-verification.json
+            .ci-work/build-policy.json
             .ci-work/native-acceptance/*.json
             .ci-work/native-acceptance/*.log
           include-hidden-files: true
