@@ -1,3 +1,6 @@
+mod document;
+pub(crate) use document::{Selection, read_snapshot};
+
 use crate::{
     error::{Error, Result},
     storage::{Lock, atomic_json},
@@ -143,25 +146,24 @@ pub fn proxy_url(raw: &str) -> Result<Url> {
     Ok(url)
 }
 pub fn read(path: &Path) -> Result<Connections> {
-    let Some(bytes) = crate::storage::optional_bytes(path, false)? else {
-        return Ok(Connections::default());
-    };
-    let text = std::str::from_utf8(&bytes)
-        .map_err(|_| Error::Safe("Connection state must be valid UTF-8; networking blocked."))?;
-    let c: Connections = serde_json::from_str(text)?;
-    c.validate()?;
-    Ok(c)
+    read_snapshot(path).map(|snapshot| snapshot.connections)
 }
 pub fn update(
     path: &Path,
     change: impl FnOnce(&mut Connections) -> Result<()>,
 ) -> Result<Connections> {
     let _lock = Lock::acquire(path)?;
-    let mut c = read(path)?;
-    change(&mut c)?;
-    c.validate()?;
-    atomic_json(path, &c)?;
-    Ok(c)
+    let mut snapshot = read_snapshot(path)?;
+    let previous = Selection::from_config(&snapshot.connections)?;
+    change(&mut snapshot.connections)?;
+    snapshot.connections.validate()?;
+    if Selection::from_config(&snapshot.connections)? != previous {
+        // Publish the selected state and its transition marker in one atomic
+        // replacement. A later return to the old route cannot erase this change.
+        snapshot.revision = Some(uuid::Uuid::new_v4().to_string());
+    }
+    atomic_json(path, &snapshot)?;
+    Ok(snapshot.connections)
 }
 
 #[cfg(test)]

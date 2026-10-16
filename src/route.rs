@@ -1,5 +1,5 @@
 use crate::{
-    config::{self, Connections, Mode},
+    config::{self, Selection},
     error::{Error, Result},
 };
 use reqwest::{Client, Proxy, redirect::Policy};
@@ -13,51 +13,26 @@ use std::{
     time::Duration,
 };
 
-// Never derive Debug: a proxy URL can contain credentials.
-#[derive(Clone, PartialEq, Eq)]
-enum Identity {
-    Direct,
-    Proxy { name: String, url: String },
-}
-impl Identity {
-    fn from_config(config: &Connections) -> Result<Self> {
-        match config.mode {
-            Mode::Blocked => Err(Error::Safe(
-                "Connection blocked. Select a proxy in the menu first.",
-            )),
-            Mode::Direct => Ok(Self::Direct),
-            Mode::Proxy => {
-                let profile = config
-                    .profiles
-                    .iter()
-                    .find(|p| Some(&p.name) == config.selected.as_ref())
-                    .ok_or(Error::Safe("Selected proxy missing; networking blocked."))?;
-                let mut url = config::proxy_url(&profile.url)?;
-                if url.scheme() == "socks5" {
-                    url.set_scheme("socks5h")
-                        .map_err(|_| Error::Safe("Invalid SOCKS route."))?;
-                }
-                Ok(Self::Proxy {
-                    name: profile.name.clone(),
-                    url: url.into(),
-                })
-            }
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct Route {
     path: PathBuf,
-    identity: Identity,
+    identity: Selection,
+    revision: Option<String>,
     revoked: Arc<AtomicBool>,
 }
 impl Route {
     pub fn new(path: PathBuf) -> Result<Self> {
-        let config = config::read(&path)?;
+        let snapshot = config::read_snapshot(&path)?;
+        let identity = Selection::from_config(&snapshot.connections)?;
+        if matches!(identity, Selection::Blocked) {
+            return Err(Error::Safe(
+                "Connection blocked. Select a proxy in the menu first.",
+            ));
+        }
         Ok(Self {
             path,
-            identity: Identity::from_config(&config)?,
+            identity,
+            revision: snapshot.revision,
             revoked: Arc::new(AtomicBool::new(false)),
         })
     }
@@ -68,10 +43,13 @@ impl Route {
         if self.revoked.load(Ordering::Acquire) {
             return Err(Self::changed_error());
         }
-        // Validate the complete file, but compare only fields that select the network route.
-        let unchanged = config::read(&self.path)
-            .and_then(|config| Identity::from_config(&config))
-            .is_ok_and(|identity| identity == self.identity);
+        // The durable revision records changes even when both writes happen
+        // between watcher ticks. Inactive edits retain it and do not disconnect.
+        let unchanged = config::read_snapshot(&self.path).is_ok_and(|snapshot| {
+            snapshot.revision == self.revision
+                && Selection::from_config(&snapshot.connections)
+                    .is_ok_and(|identity| identity == self.identity)
+        });
         if unchanged && !self.revoked.load(Ordering::Acquire) {
             Ok(())
         } else {
@@ -120,7 +98,7 @@ impl Route {
         if let Some(timeout) = timeout {
             builder = builder.timeout(timeout);
         }
-        if let Identity::Proxy { url, .. } = &self.identity {
+        if let Selection::Proxy { url, .. } = &self.identity {
             builder = builder.proxy(Proxy::all(url)?);
         }
         Ok(builder)
