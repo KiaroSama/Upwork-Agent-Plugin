@@ -108,11 +108,7 @@ fn owned_registration(root: &Path, old: &Value, entry: &Value) -> bool {
             .is_some_and(|path| same_or_exact(Path::new(path), &root.join("src/bridge.ts")))
 }
 fn snapshot(path: &Path) -> Result<Option<Vec<u8>>> {
-    match fs::read(path) {
-        Ok(bytes) => Ok(Some(bytes)),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
-        Err(error) => Err(error.into()),
-    }
+    storage::optional_bytes(path, true)
 }
 fn object(bytes: &Option<Vec<u8>>) -> Result<Value> {
     let value: Value = match bytes {
@@ -184,13 +180,15 @@ pub fn register(root: &Path) -> Result<()> {
             "Registration configuration changed concurrently; retry after reviewing it.",
         ));
     }
+    // Validate both serializations before publishing either destination.
+    let mcp_bytes = storage::json_bytes(&mcp)?;
     publish_pair(&settings_path, &settings, &original_settings, || {
         if snapshot(&mcp_path)? != original_mcp {
             return Err(Error::Safe(
                 "MCP configuration changed concurrently; replacement refused.",
             ));
         }
-        storage::atomic_json(&mcp_path, &mcp)
+        storage::atomic_bytes(&mcp_path, &mcp_bytes)
     })
 }
 
@@ -201,8 +199,7 @@ fn publish_pair(
     publish_mcp: impl FnOnce() -> Result<()>,
 ) -> Result<()> {
     // Publish the direct-route denial first. A crash cannot install the connector before its denial.
-    let mut published = serde_json::to_vec_pretty(settings)?;
-    published.push(b'\n');
+    let published = storage::json_bytes(settings)?;
     storage::atomic_bytes(settings_path, &published)?;
     if let Err(error) = publish_mcp() {
         // Equivalent JSON can still be an intervening edit; compare our exact bytes.

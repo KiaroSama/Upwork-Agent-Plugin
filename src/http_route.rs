@@ -1,6 +1,9 @@
 mod event_limit;
 mod initialization;
+mod initialization_control;
 mod initialization_response;
+#[cfg(test)]
+mod ping_tests;
 
 use crate::route::Route;
 use http::{HeaderName, HeaderValue};
@@ -99,20 +102,60 @@ impl StreamableHttpClient for McpRoute {
         let is_initialize = matches!(&message, ClientJsonRpcMessage::Request(request)
             if matches!(request.request, rmcp::model::ClientRequest::InitializeRequest(_)));
         self.guarded("post", async {
-            let response = if self.verify_initialization && is_initialize {
-                initialization::post(&self.client, uri, message, session, auth, (headers, max))
-                    .await?
+            let context = if is_initialize {
+                let value = serde_json::to_value(&message).map_err(|_| {
+                    StreamableHttpError::UnexpectedServerResponse(Cow::Borrowed(
+                        "Cannot encode initialization context.",
+                    ))
+                })?;
+                let protocol = value["params"]["protocolVersion"]
+                    .as_str()
+                    .ok_or_else(|| {
+                        StreamableHttpError::UnexpectedServerResponse(Cow::Borrowed(
+                            "Initialization protocol missing.",
+                        ))
+                    })?
+                    .to_owned();
+                Some(initialization_control::Context {
+                    client: self.client.clone(),
+                    uri: uri.clone(),
+                    session: session.clone(),
+                    auth: auth.clone(),
+                    headers: headers.clone(),
+                    protocol,
+                })
             } else {
-                self.client
-                    .post_message_with_max_sse_event_size(uri, message, session, auth, headers, max)
-                    .await?
+                None
+            };
+            let exchange = async {
+                let response = if self.verify_initialization && is_initialize {
+                    initialization::post(&self.client, uri, message, session, auth, (headers, max))
+                        .await?
+                } else {
+                    self.client
+                        .post_message_with_max_sse_event_size(
+                            uri, message, session, auth, headers, max,
+                        )
+                        .await?
+                };
+                if is_initialize {
+                    // The SDK's SSE initializer ignores JSON-RPC errors. Select the
+                    // first terminal reply before that filter, on both client paths.
+                    initialization_response::first_terminal(response, context).await
+                } else {
+                    Ok(response)
+                }
             };
             if is_initialize {
-                // The SDK's SSE initializer ignores JSON-RPC errors. Select the
-                // first terminal reply before that filter, on both client paths.
-                initialization_response::first_terminal(response).await
+                tokio::time::timeout(std::time::Duration::from_secs(30), exchange)
+                    .await
+                    .map_err(|_| {
+                        StreamableHttpError::UnexpectedServerResponse(Cow::Borrowed(
+                            "MCP initialization deadline exceeded; no replay.",
+                        ))
+                    })?
             } else {
-                Ok(response)
+                exchange.await
             }
         })
         .await

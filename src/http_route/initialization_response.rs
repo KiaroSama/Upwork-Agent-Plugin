@@ -1,43 +1,10 @@
-use futures::StreamExt;
-use rmcp::{
-    model::ServerJsonRpcMessage,
-    transport::streamable_http_client::{StreamableHttpError, StreamableHttpPostResponse},
-};
-use std::borrow::Cow;
-
+use rmcp::transport::streamable_http_client::{StreamableHttpError, StreamableHttpPostResponse};
 type Failure = StreamableHttpError<reqwest::Error>;
-
 pub(super) async fn first_terminal(
     response: StreamableHttpPostResponse,
+    context: Option<super::initialization_control::Context>,
 ) -> Result<StreamableHttpPostResponse, Failure> {
-    let StreamableHttpPostResponse::Sse(mut stream, session) = response else {
-        return Ok(response);
-    };
-    while let Some(event) = stream.next().await {
-        let event = event?;
-        let payload = event.data.unwrap_or_default();
-        if payload.trim().is_empty() {
-            continue;
-        }
-        let message: ServerJsonRpcMessage = serde_json::from_str(&payload).map_err(|_| {
-            StreamableHttpError::UnexpectedServerResponse(Cow::Borrowed(
-                "Invalid initialization response; private data suppressed.",
-            ))
-        })?;
-        if matches!(
-            message,
-            ServerJsonRpcMessage::Response(_) | ServerJsonRpcMessage::Error(_)
-        ) {
-            // This is the SDK's existing decoded-message carrier, not a new
-            // wire request. Preserve IDs/session and do not consume a later
-            // success after an error. The original SDK also drops this stream
-            // after selecting its initialization response.
-            return Ok(StreamableHttpPostResponse::Json(message, session));
-        }
-        // Preserve current handling of pre-initialization notifications/pings.
-        // In particular, do not synthesize replies or replay any request.
-    }
-    Err(StreamableHttpError::UnexpectedEndOfStream)
+    super::initialization_control::first_terminal(response, context).await
 }
 
 #[cfg(test)]
@@ -50,7 +17,9 @@ mod tests {
         response::{IntoResponse, Sse, sse::Event},
         routing::post,
     };
+    use futures::StreamExt;
     use futures::{FutureExt, stream};
+    use rmcp::model::ServerJsonRpcMessage;
     use rmcp::{
         model::ClientJsonRpcMessage, transport::streamable_http_client::StreamableHttpClient,
     };
@@ -249,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn accepted_notification_carrier_passes_through_without_network() {
-        let response = first_terminal(StreamableHttpPostResponse::Accepted)
+        let response = first_terminal(StreamableHttpPostResponse::Accepted, None)
             .await
             .unwrap();
         assert!(matches!(response, StreamableHttpPostResponse::Accepted));

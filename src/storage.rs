@@ -1,3 +1,6 @@
+mod bounded;
+pub use bounded::{MAX_STATE_BYTES, json_bytes, optional_bytes};
+
 use crate::error::{Error, Result};
 use serde::Serialize;
 use std::{
@@ -60,11 +63,14 @@ fn private_options() -> OpenOptions {
     options
 }
 pub fn atomic_json(path: &Path, value: &impl Serialize) -> Result<()> {
-    let mut bytes = serde_json::to_vec_pretty(value)?;
-    bytes.push(b'\n');
-    atomic_bytes(path, &bytes)
+    atomic_bytes(path, &json_bytes(value)?)
 }
 pub fn atomic_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
+    if bytes.len() > MAX_STATE_BYTES {
+        return Err(Error::Safe(
+            "Internal state exceeds 16 MiB; original data preserved.",
+        ));
+    }
     let parent = path.parent().ok_or(Error::Safe("Invalid state path."))?;
     fs::create_dir_all(parent)?;
     let temp = parent.join(format!("{}.tmp", uuid::Uuid::new_v4()));

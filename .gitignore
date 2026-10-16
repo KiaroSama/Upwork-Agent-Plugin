@@ -54,3 +54,7 @@ Thumbs.db
 # Persistent OS-lock files contain no state and must never be published.
 /config/*.json.lock
 /.mcp.json.lock
+
+# Native fixture bytecode is generated state, never publication source.
+__pycache__/
+*.py[cod]
