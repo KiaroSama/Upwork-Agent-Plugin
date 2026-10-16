@@ -18,7 +18,7 @@ fn invalid() -> Failure {
     ))
 }
 
-fn envelope(bytes: &[u8]) -> Result<ServerJsonRpcMessage, Failure> {
+pub(super) fn envelope(bytes: &[u8]) -> Result<ServerJsonRpcMessage, Failure> {
     let value: Value = serde_json::from_slice(bytes).map_err(|_| invalid())?;
     let object = value.as_object().ok_or_else(invalid)?;
     let forms = ["method", "result", "error"]

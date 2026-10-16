@@ -146,7 +146,9 @@ pub fn read(path: &Path) -> Result<Connections> {
     let Some(bytes) = crate::storage::optional_bytes(path, false)? else {
         return Ok(Connections::default());
     };
-    let c: Connections = serde_json::from_slice(&bytes)?;
+    let text = std::str::from_utf8(&bytes)
+        .map_err(|_| Error::Safe("Connection state must be valid UTF-8; networking blocked."))?;
+    let c: Connections = serde_json::from_str(text)?;
     c.validate()?;
     Ok(c)
 }
@@ -160,4 +162,21 @@ pub fn update(
     c.validate()?;
     atomic_json(path, &c)?;
     Ok(c)
+}
+
+#[cfg(test)]
+mod utf8_tests {
+    use super::*;
+
+    #[test]
+    fn invalid_utf8_in_ignored_fields_is_refused_without_rewriting_state() {
+        std::fs::create_dir_all(".ci-work").unwrap();
+        let root = tempfile::tempdir_in(".ci-work").unwrap();
+        let path = root.path().join("connections.json");
+        let bytes = b"{\"version\":1,\"mode\":\"direct\",\"selected\":null,\"profiles\":[],\"ignored\":\"\xff\"}";
+        std::fs::write(&path, bytes).unwrap();
+        assert!(read(&path).is_err());
+        assert!(update(&path, |_| Ok(())).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+    }
 }

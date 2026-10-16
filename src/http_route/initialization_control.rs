@@ -79,7 +79,7 @@ pub(super) async fn first_terminal(
         }
         let raw: Value = serde_json::from_str(&payload)
             .map_err(|_| invalid("Invalid initialization response; private data suppressed."))?;
-        let message: ServerJsonRpcMessage = serde_json::from_value(raw.clone())
+        let message = super::initialization::envelope(payload.as_bytes())
             .map_err(|_| invalid("Invalid initialization response; private data suppressed."))?;
         match message {
             ServerJsonRpcMessage::Response(_) | ServerJsonRpcMessage::Error(_) => {

@@ -24,6 +24,7 @@ async fn exchange(
     reject: bool,
     block: bool,
     explicit_protocol: bool,
+    mixed: bool,
 ) -> (bool, Vec<Value>) {
     std::fs::create_dir_all(".ci-work").unwrap();
     let root = tempfile::tempdir_in(".ci-work").unwrap();
@@ -71,8 +72,12 @@ async fn exchange(
             assert_eq!(message["method"], "initialize");
             initial_count.fetch_add(1, Ordering::SeqCst);
             let count = ids.len();
-            let events = ids.into_iter().map(|id| Ok::<_, Infallible>(Event::default().data(
-                json!({"jsonrpc":"2.0","id":id,"method":"ping"}).to_string())));
+            let events = ids.into_iter().map(move |id| Ok::<_, Infallible>(Event::default().data(
+                {
+                let mut ping = json!({"jsonrpc":"2.0","id":id,"method":"ping"});
+                if mixed { ping["error"] = json!({"code":-32602,"message":"rejected"}); }
+                ping.to_string()
+            })));
             let final_reply = stream::once(async move {
                 gate.acquire_many(count as u32).await.unwrap().forget();
                 Ok::<_, Infallible>(Event::default().data(json!({"jsonrpc":"2.0","id":1,"result":{
@@ -145,7 +150,7 @@ async fn gated_ping_ids_and_session_auth_headers_are_preserved_in_both_paths() {
             vec![json!("007")],
             vec![json!(1), json!("1")],
         ] {
-            let (ok, actual) = exchange(strict, ids.clone(), false, false, false).await;
+            let (ok, actual) = exchange(strict, ids.clone(), false, false, false, false).await;
             assert!(ok);
             assert_eq!(actual, ids);
         }
@@ -155,7 +160,8 @@ async fn gated_ping_ids_and_session_auth_headers_are_preserved_in_both_paths() {
 #[tokio::test]
 async fn rejected_ping_reply_fails_without_initialization_or_control_replay() {
     for strict in [false, true] {
-        let (ok, actual) = exchange(strict, vec![json!("rejected")], true, false, false).await;
+        let (ok, actual) =
+            exchange(strict, vec![json!("rejected")], true, false, false, false).await;
         assert!(!ok);
         assert_eq!(actual, vec![json!("rejected")]);
     }
@@ -170,6 +176,7 @@ async fn control_ping_budget_is_finite_in_both_paths() {
             false,
             false,
             false,
+            false,
         )
         .await;
         assert!(!ok);
@@ -180,7 +187,8 @@ async fn control_ping_budget_is_finite_in_both_paths() {
 #[tokio::test]
 async fn block_cancels_a_stalled_control_response_in_both_paths() {
     for strict in [false, true] {
-        let (ok, actual) = exchange(strict, vec![json!("blocked")], false, true, false).await;
+        let (ok, actual) =
+            exchange(strict, vec![json!("blocked")], false, true, false, false).await;
         assert!(!ok);
         assert_eq!(actual, vec![json!("blocked")]);
     }
@@ -189,8 +197,18 @@ async fn block_cancels_a_stalled_control_response_in_both_paths() {
 #[tokio::test]
 async fn explicitly_supplied_protocol_header_is_preserved_once() {
     for strict in [false, true] {
-        let (ok, actual) = exchange(strict, vec![json!("explicit")], false, false, true).await;
+        let (ok, actual) =
+            exchange(strict, vec![json!("explicit")], false, false, true, false).await;
         assert!(ok);
         assert_eq!(actual, vec![json!("explicit")]);
+    }
+}
+
+#[tokio::test]
+async fn mixed_ping_error_is_refused_without_reply_in_both_paths() {
+    for strict in [false, true] {
+        let (ok, replies) = exchange(strict, vec![json!(7)], false, false, false, true).await;
+        assert!(!ok);
+        assert!(replies.is_empty());
     }
 }

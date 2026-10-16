@@ -63,12 +63,8 @@ fn open_regular(path: &Path, refuse_links: bool) -> Result<fs::File> {
 }
 
 pub fn optional_bytes(path: &Path, refuse_links: bool) -> Result<Option<Vec<u8>>> {
-    let metadata = if refuse_links {
-        fs::symlink_metadata(path)
-    } else {
-        fs::metadata(path)
-    };
-    let metadata = match metadata {
+    // Absence of the directory entry permits defaults; a dangling target does not.
+    let metadata = match fs::symlink_metadata(path) {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(_) => return Err(Error::Safe("Internal state metadata unavailable.")),
@@ -76,6 +72,11 @@ pub fn optional_bytes(path: &Path, refuse_links: bool) -> Result<Option<Vec<u8>>
     if refuse_links && crate::cleanup::linked(&metadata) {
         return Err(invalid());
     }
+    let metadata = if refuse_links {
+        metadata
+    } else {
+        fs::metadata(path).map_err(|_| Error::Safe("Internal state metadata unavailable."))?
+    };
     validate(&metadata)?;
     let file = open_regular(path, refuse_links)?;
     read_limited(file, MAX_STATE_BYTES).map(Some)
@@ -222,7 +223,16 @@ mod tests {
         std::os::unix::fs::symlink(&target, &link).unwrap();
         assert_eq!(optional_bytes(&link, false).unwrap().unwrap(), b"{}");
         assert!(optional_bytes(&link, true).is_err());
-        assert_eq!(fs::read(target).unwrap(), b"{}");
+        assert_eq!(fs::read(&target).unwrap(), b"{}");
+        fs::remove_file(&target).unwrap();
+        assert!(optional_bytes(&link, false).is_err());
+        assert!(optional_bytes(&link, true).is_err());
+        assert!(
+            fs::symlink_metadata(&link)
+                .unwrap()
+                .file_type()
+                .is_symlink()
+        );
     }
     #[cfg(unix)]
     #[test]
@@ -240,5 +250,62 @@ mod tests {
         // Directly exercise the post-preflight path to model a substituted FIFO.
         assert!(open_regular(&path, false).is_err());
         assert!(open_regular(&path, true).is_err());
+    }
+    #[cfg(unix)]
+    #[test]
+    fn all_saved_credential_and_client_json_paths_reject_special_files() {
+        for kind in ["credentials", "client", "tokens", "client_info"] {
+            let root = temp();
+            let store = crate::credentials::Store {
+                root: root.path().into(),
+            };
+            let path = match kind {
+                "credentials" => store.path(),
+                "client" => root.path().join(".state/rust/client.json"),
+                _ => store.legacy_path(kind),
+            };
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            assert!(
+                std::process::Command::new("mkfifo")
+                    .arg(&path)
+                    .status()
+                    .unwrap()
+                    .success()
+            );
+            assert!(crate::credentials::optional_json(&path).is_err());
+            if kind == "credentials" || kind == "tokens" {
+                assert!(store.load_local().is_err());
+            } else {
+                assert!(store.client_registration().is_err());
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn route_guard_revokes_instead_of_blocking_on_a_replaced_config() {
+        let root = temp();
+        let path = root.path().join("config/connections.json");
+        crate::config::update(&path, |value| {
+            value.mode = crate::config::Mode::Direct;
+            Ok(())
+        })
+        .unwrap();
+        let route = crate::route::Route::new(path.clone()).unwrap();
+        let mut guarded = Box::pin(route.guard(std::future::pending::<()>()));
+        assert!(futures::poll!(&mut guarded).is_pending());
+        fs::remove_file(&path).unwrap();
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&path)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let result = tokio::time::timeout(std::time::Duration::from_secs(1), guarded)
+            .await
+            .unwrap();
+        assert!(result.is_err());
+        assert!(route.check().is_err());
     }
 }

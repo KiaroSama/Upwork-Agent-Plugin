@@ -516,7 +516,7 @@ Dependabot checks Cargo/actions. CI starts only by manual dispatch; that final b
 and explicit base/head dependency review. Linux CI also runs the
 retained native CLI and initialization probes against its checksum-verified packaged executable:
 272 CLI assertions, 30 sign-in contracts, 20 raw/framing cases, three credential coordination cases,
-eight ordering cases for each entry point, 20 gated initialization-ping cases and 13 bounded-state cases.
+eight ordering cases for each entry point, 20 gated initialization-ping cases and 21 bounded-state cases including four valid controls.
 The Python fixtures under `tests/native/` use isolated loopback TLS and child-only trust, never real
 account state. Each probe has a 180-second controller deadline; synthetic keys and binaries are
 removed, while sanitized JSON receipts and UTC diagnostic logs are retained as verification artifacts.

@@ -64,7 +64,7 @@ def reply(self, value=None, status=200, kind='application/json'):
     self.close_connection = True
 
 
-def execute(binary: Path, root: Path, certificates: Path, command: str) -> dict:
+def execute(binary: Path, root: Path, certificates: Path, command: str, ready_event: threading.Event | None = None) -> dict:
     env = os.environ.copy()
     env.update(SSL_CERT_FILE=str(certificates/'ca.pem'), SSL_CERT_DIR=str(certificates/'empty'))
     for key in ('TEMP', 'TMP', 'TMPDIR'):
@@ -112,6 +112,11 @@ def execute(binary: Path, root: Path, certificates: Path, command: str) -> dict:
                 message = json.loads(line)
                 if 'result' in message or 'error' in message:
                     observed = 'error' if 'error' in message else 'result'
+                    if observed == 'result' and ready_event is not None:
+                        child.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n')
+                        child.stdin.flush()
+                        if not ready_event.wait(max(0, deadline-time.monotonic())):
+                            timed_out = True
                     break
         if command == 'bridge':
             child.stdin.close()

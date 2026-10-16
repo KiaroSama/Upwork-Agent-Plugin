@@ -42,6 +42,7 @@ class Handler(protocol.Handler):
             negotiated = '2025-03-26' if self.server.case == 'fallback' else '2025-11-25'
             self.server.ready_version_ok &= self.headers.get('Mcp-Protocol-Version') == negotiated
             self.server.initialized += 1
+            self.server.ready_seen.set()
             return self.reply(None, 202)
         if method != 'initialize':
             return self.reply(None, 400)
@@ -90,6 +91,7 @@ class Fixture(protocol.Fixture):
         self.gate_expired = False
         self.initialize_requests = 0
         self.ready_version_ok = True
+        self.ready_seen = threading.Event()
 
 def run(binary, ca, output, mode, case):
     with tempfile.TemporaryDirectory(prefix='ping-case-', dir=output) as directory:
@@ -107,7 +109,8 @@ def run(binary, ca, output, mode, case):
                     raise RuntimeError('Synthetic credential preparation failed.')
                 server.case = case
             server.initialized = 0
-            result = execute(binary, root, ca, mode)
+            server.ready_seen.clear()
+            result = execute(binary, root, ca, mode, server.ready_seen if mode == "bridge" else None)
             positive = case not in {'reply_failure','overflow','ping_then_error'}
             expected_pings = 0 if case == 'no_ping' else 2 if case == 'multiple' else 16 if case == 'overflow' else 1
             application_ok = (result['completion_claimed'] if mode == 'sign-in'
@@ -115,7 +118,9 @@ def run(binary, ca, output, mode, case):
             passed = (application_ok == positive and server.valid_replies
                       and server.ping_replies == expected_pings and server.initialize_requests == 1
                       and not result['controller_timeout'] and not result['private_marker_in_stderr']
-                      and server.ready_version_ok)
+                      and server.initialized == int(positive)
+                      and server.ready_version_ok
+                      and server.ready_seen.is_set() == positive)
             if mode == 'sign-in':
                 passed &= result['callback_sent'] and server.initialized == int(positive) and (result['returncode'] == 0) == positive
             if case == 'ping_then_error' and mode == 'bridge':
