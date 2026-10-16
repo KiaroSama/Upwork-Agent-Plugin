@@ -40,10 +40,10 @@ Git or local compilation is needed.
 
 | Machine | Download |
 | --- | --- |
-| Windows x64 | [upwork-agent-plugin-2.1.6-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.6-windows-x64.zip) |
-| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.6-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.6-linux-x64.tar.gz) |
-| macOS Apple Silicon | [upwork-agent-plugin-2.1.6-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.6-macos-arm64.tar.gz) |
-| macOS Intel | [upwork-agent-plugin-2.1.6-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.6-macos-x64.tar.gz) |
+| Windows x64 | [upwork-agent-plugin-2.1.7-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.7-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.7-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.7-linux-x64.tar.gz) |
+| macOS Apple Silicon | [upwork-agent-plugin-2.1.7-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.7-macos-arm64.tar.gz) |
+| macOS Intel | [upwork-agent-plugin-2.1.7-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.7-macos-x64.tar.gz) |
 
 Each archive contains the executable in `bin/`, its launchers, skills plugin and GPL license.
 `release.json` records the version, platform and source commit; corresponding source is available at
@@ -53,19 +53,19 @@ Do not move only the executable or overwrite existing profiles, saved sessions, 
 Verify SHA256 before running. On Windows, from your downloads folder:
 
 ```bash
-powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.6-windows-x64.zip -Algorithm SHA256"
+powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.7-windows-x64.zip -Algorithm SHA256"
 ```
 
 Compare the displayed hash with the matching `.sha256` file. On Linux:
 
 ```bash
-sha256sum -c upwork-agent-plugin-2.1.6-linux-x64.tar.gz.sha256
+sha256sum -c upwork-agent-plugin-2.1.7-linux-x64.tar.gz.sha256
 ```
 
 On macOS Apple Silicon (use the x64 filename on Intel):
 
 ```bash
-shasum -a 256 -c upwork-agent-plugin-2.1.6-macos-arm64.tar.gz.sha256
+shasum -a 256 -c upwork-agent-plugin-2.1.7-macos-arm64.tar.gz.sha256
 ```
 
 Alternatively, download the platform artifact from a successful exact-commit
@@ -110,7 +110,7 @@ mkdir -m 700 upwork-agent-plugin
 ```
 
 ```bash
-tar -xzf upwork-agent-plugin-2.1.6-linux-x64.tar.gz -C upwork-agent-plugin
+tar -xzf upwork-agent-plugin-2.1.7-linux-x64.tar.gz -C upwork-agent-plugin
 ```
 
 Unix archives preserve executable permissions. The optional launcher needs `sh`, not PowerShell:
@@ -353,7 +353,7 @@ varies; this is not a universal `codex plugin install` command. Standalone copyi
 
 ### Install the Cursor skill
 
-Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.6.zip).
+Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.7.zip).
 Copy `skills/upwork-project-selection/` to the workspace's `.agents/skills/upwork-project-selection/`.
 Preserve existing files, keep only one discovery copy, reopen the workspace and invoke `/upwork-project-selection`.
 
@@ -553,3 +553,9 @@ If this project helps you, donations are appreciated.
 ### Bulk import scaling
 
 Colliding display labels retain the same first-free identifiers, including holes and nested names. A transaction-local cursor avoids repeatedly scanning occupied prefixes; duplicate URLs consume no names. The 1 MiB input limit, active route, labels and atomic publication contract are unchanged. Deterministic probe-count and differential tests gate this optimization; recorded runner timings are diagnostic, not portable speed guarantees.
+
+### Route transition revisions and build deadlines
+
+Current connector writers atomically store an internal `_route_revision` only when the canonical effective route changes. A completed route cycle revokes old connections even between watcher observations; inactive-profile, label, ordering and equivalent-URL edits do not disconnect them. Legacy files remain readable without read-time rewriting. This marker does not authenticate external edits or detect every unobserved historical-document replay. Reconnect after an effective route change.
+
+Optimized release compilation keeps a900-second wall deadline and a600-second output-idle deadline. Ordinary verification retains900/180 seconds. Optimization, stripping and failure exit handling remain enabled; silence alone is not proof of compiler progress.

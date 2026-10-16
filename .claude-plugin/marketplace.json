@@ -9,7 +9,7 @@
       "name": "upwork-agent-connector",
       "description": "Evidence-based, read-only Upwork project selection.",
       "source": "./",
-      "version": "2.1.6"
+      "version": "2.1.7"
     }
   ]
 }
