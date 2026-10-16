@@ -1,3 +1,5 @@
+mod names;
+
 use crate::{
     config::{self, Connections, Mode, Profile},
     error::{Error, Result},
@@ -127,7 +129,7 @@ pub fn import_file(config: &Path, input: &str) -> Result<(usize, usize)> {
             .iter()
             .map(|p| config::proxy_url(&p.url).map(|u| u.to_string()))
             .collect::<Result<_>>()?;
-        let mut names: HashSet<String> = c.profiles.iter().map(|p| p.name.clone()).collect();
+        let mut names = names::Names::new(c.profiles.iter().map(|p| p.name.clone()));
         let slug = Regex::new(r"[^a-zA-Z0-9_-]+")
             .map_err(|_| Error::Safe("Cannot initialize profile identifiers."))?;
         for mut p in parsed {
@@ -148,14 +150,7 @@ pub fn import_file(config: &Path, input: &str) -> Result<(usize, usize)> {
             } else {
                 base
             };
-            let mut name = base.clone();
-            let mut suffix = 2;
-            while names.contains(&name) {
-                name = format!("{base}-{suffix}");
-                suffix += 1;
-            }
-            p.name = name.clone();
-            names.insert(name);
+            p.name = names.allocate(&base)?;
             urls.insert(normalized);
             c.profiles.push(p);
             imported += 1;
