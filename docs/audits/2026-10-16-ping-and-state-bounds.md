@@ -157,3 +157,8 @@ Reference: https://github.com/modelcontextprotocol/typescript-sdk/blob/main/pack
 #### Measured compatibility before/after result
 
 The existing PR candidate reproduced the unsupported offered-version header failure in both native modes while both no-ping controls passed. After correction, **161 compiled Linux tests** passed with zero failures/errors/skips, alongside **20/20 gated-ping cases** and **13/13 bounded-state cases**. This includes negotiated fallback to `2025-03-26` and the corresponding readiness header. N02 source and Cargo dependencies remained unchanged. Final cross-platform CI must be tied to the follow-up commit, not the earlier candidate.
+
+## Owner review disposition — 2026-10-16
+H01 is rejected under the actual repository identity policy: the public-email requirement governs the owner's identity, while legitimate bot identities may remain bots. The owner explicitly chose to preserve the authentic Dependabot/GitHub commit and its verified signature. No history rewrite is required or performed; prior text demanding replacement of every bot identity is superseded by this decision. All new owner-attributed commits continue to use the approved public address.
+
+The reviewing continuation prepares patch2.1.5 and Rust1.99.1 hosted toolchain, retaining the implemented N01/N02 source and all eight native acceptance suites. The older overlapping state-input PR is assessed for equivalent coverage before any superseded disposition. Final source-specific CI, signed release and installed-state verification remain separate from the historical audit receipts above.

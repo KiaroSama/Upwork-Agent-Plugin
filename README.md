@@ -40,10 +40,10 @@ Git or local compilation is needed.
 
 | Machine | Download |
 | --- | --- |
-| Windows x64 | [upwork-agent-plugin-2.1.4-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.4-windows-x64.zip) |
-| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.4-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.4-linux-x64.tar.gz) |
-| macOS Apple Silicon | [upwork-agent-plugin-2.1.4-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.4-macos-arm64.tar.gz) |
-| macOS Intel | [upwork-agent-plugin-2.1.4-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.4-macos-x64.tar.gz) |
+| Windows x64 | [upwork-agent-plugin-2.1.5-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.5-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.5-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.5-linux-x64.tar.gz) |
+| macOS Apple Silicon | [upwork-agent-plugin-2.1.5-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.5-macos-arm64.tar.gz) |
+| macOS Intel | [upwork-agent-plugin-2.1.5-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.5-macos-x64.tar.gz) |
 
 Each archive contains the executable in `bin/`, its launchers, skills plugin and GPL license.
 `release.json` records the version, platform and source commit; corresponding source is available at
@@ -53,19 +53,19 @@ Do not move only the executable or overwrite existing profiles, saved sessions, 
 Verify SHA256 before running. On Windows, from your downloads folder:
 
 ```bash
-powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.4-windows-x64.zip -Algorithm SHA256"
+powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.5-windows-x64.zip -Algorithm SHA256"
 ```
 
 Compare the displayed hash with the matching `.sha256` file. On Linux:
 
 ```bash
-sha256sum -c upwork-agent-plugin-2.1.4-linux-x64.tar.gz.sha256
+sha256sum -c upwork-agent-plugin-2.1.5-linux-x64.tar.gz.sha256
 ```
 
 On macOS Apple Silicon (use the x64 filename on Intel):
 
 ```bash
-shasum -a 256 -c upwork-agent-plugin-2.1.4-macos-arm64.tar.gz.sha256
+shasum -a 256 -c upwork-agent-plugin-2.1.5-macos-arm64.tar.gz.sha256
 ```
 
 Alternatively, download the platform artifact from a successful exact-commit
@@ -110,7 +110,7 @@ mkdir -m 700 upwork-agent-plugin
 ```
 
 ```bash
-tar -xzf upwork-agent-plugin-2.1.4-linux-x64.tar.gz -C upwork-agent-plugin
+tar -xzf upwork-agent-plugin-2.1.5-linux-x64.tar.gz -C upwork-agent-plugin
 ```
 
 Unix archives preserve executable permissions. The optional launcher needs `sh`, not PowerShell:
@@ -353,7 +353,7 @@ varies; this is not a universal `codex plugin install` command. Standalone copyi
 
 ### Install the Cursor skill
 
-Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.4.zip).
+Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.5.zip).
 Copy `skills/upwork-project-selection/` to the workspace's `.agents/skills/upwork-project-selection/`.
 Preserve existing files, keep only one discovery copy, reopen the workspace and invoke `/upwork-project-selection`.
 
@@ -483,6 +483,20 @@ Source builds can consume several GB under `target/`; user installation never ne
 Build/verification scripts keep generated paths inside the project. Preserve `bin/`, profiles, session,
 input files and operational logs when clearing optional development artifacts; shared tools remain untouched.
 
+### Initialization controls and state limits
+
+During SSE initialization, the connector answers server pings with the original ID over the same
+selected route before waiting for the terminal response. Control replies have a five-second deadline;
+initialization has one 30-second deadline, a 16-ping budget and a 256-event budget. An offered protocol
+version is not invented as an already-negotiated header. No initialize request is replayed.
+
+Internal JSON state reads and writes have a shared 16 MiB byte limit, including serialized JSON's
+final newline. Special files and oversized state are rejected without truncating existing data.
+Regular-file links remain readable for profiles/settings/credentials; registration refuses leaf links.
+The separate proxy-import input limit remains 1 MiB. Accumulated valid state may exceed 1 MiB.
+Back up and explicitly reduce older state larger than 16 MiB before retrying; the connector does not
+silently trim it. These checks do not guarantee interrupting a stuck kernel or network filesystem.
+
 ## Tests and CI
 
 ```bash
@@ -501,9 +515,10 @@ caches and test keys are excluded. Artifacts expire after 14 days; Releases are 
 Dependabot checks Cargo/actions. CI starts only by manual dispatch; that final batch includes CodeQL
 and explicit base/head dependency review. Linux CI also runs the
 retained native CLI and initialization probes against its checksum-verified packaged executable:
-272 CLI assertions, 30 sign-in contracts, 20 raw/framing cases, three credential coordination cases and eight ordering cases for each entry
-point. The Python fixtures under `tests/native/` use isolated loopback TLS and child-only trust, never
-real account state. Each probe has a 180-second controller deadline; synthetic keys and binaries are
+272 CLI assertions, 30 sign-in contracts, 20 raw/framing cases, three credential coordination cases,
+eight ordering cases for each entry point, 20 gated initialization-ping cases and 13 bounded-state cases.
+The Python fixtures under `tests/native/` use isolated loopback TLS and child-only trust, never real
+account state. Each probe has a 180-second controller deadline; synthetic keys and binaries are
 removed, while sanitized JSON receipts and UTC diagnostic logs are retained as verification artifacts.
 
 Controlled localhost fixtures cover HTTP/HTTPS/SOCKS authentication/DNS, refusal/no fallback,

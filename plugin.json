@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "upwork-agent-connector",
-  "version": "2.1.4",
+  "version": "2.1.5",
   "description": "Evidence-based Upwork job assessment and approved profile workflows with a separate native fail-closed connector.",
   "author": {
     "name": "KiaroSama"
