@@ -486,6 +486,65 @@ async fn blocked_route_cancels_a_stalled_noninitialization_body() {
 }
 
 #[tokio::test]
+async fn malformed_and_truncated_json_requests_fail_without_private_body_or_replay() {
+    for chunked in [false, true] {
+        for bytes in [
+            &b"private-fixture-marker"[..],
+            &b"{\"jsonrpc\":\"2.0\",\"id\":31,\"result\":{\"private-fixture-marker\":"[..],
+        ] {
+            for status in [StatusCode::OK, StatusCode::INTERNAL_SERVER_ERROR] {
+                let mut reply = Reply::json("application/json");
+                reply.chunked = chunked;
+                reply.status = status;
+                reply.bytes = bytes.to_vec();
+                let f = Fixture::new(reply).await;
+                let error = f.post(ping(), 512, false).await.unwrap_err();
+                assert!(!error.to_string().contains("private-fixture-marker"));
+                assert_eq!(f.count.load(Ordering::SeqCst), 1);
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn ordinary_post_preserves_session_authorization_protocol_and_custom_headers() {
+    let f = Fixture::new(Reply::json("Application/JSON")).await;
+    let headers = HashMap::from([
+        (
+            HeaderName::from_static("x-fixture"),
+            HeaderValue::from_static("preserved"),
+        ),
+        (
+            HeaderName::from_static("mcp-protocol-version"),
+            HeaderValue::from_static("2025-11-25"),
+        ),
+    ]);
+    let result = tokio::time::timeout(
+        Duration::from_secs(3),
+        f.client.post_message(
+            f.uri.clone(),
+            serde_json::from_value(ping()).unwrap(),
+            Some("fixture-session".into()),
+            Some("synthetic-token".into()),
+            headers,
+        ),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert!(matches!(result, StreamableHttpPostResponse::Json(_, _)));
+    let values = f.captured.lock().unwrap();
+    assert_eq!(values.len(), 1);
+    let (method, headers, value) = &values[0];
+    assert_eq!(*method, Method::POST);
+    assert_eq!(headers["authorization"], "Bearer synthetic-token");
+    assert_eq!(headers["mcp-session-id"], "fixture-session");
+    assert_eq!(headers["mcp-protocol-version"], "2025-11-25");
+    assert_eq!(headers["x-fixture"], "preserved");
+    assert_eq!(*value, ping());
+}
+
+#[tokio::test]
 async fn normal_json_budget_is_separate_from_sse_and_bounds_chunked_errors() {
     for chunked in [false, true] {
         for error in [false, true] {
