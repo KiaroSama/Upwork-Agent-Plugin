@@ -2,8 +2,12 @@ mod event_limit;
 mod initialization;
 mod initialization_control;
 mod initialization_response;
+mod media_type;
 #[cfg(test)]
 mod ping_tests;
+#[cfg(test)]
+mod response_tests;
+mod responses;
 
 use crate::route::Route;
 use http::{HeaderName, HeaderValue};
@@ -114,11 +118,16 @@ impl StreamableHttpClient for McpRoute {
                     initialization::post(&self.client, uri, message, session, auth, (headers, max))
                         .await?
                 } else {
-                    self.client
-                        .post_message_with_max_sse_event_size(
-                            uri, message, session, auth, headers, max,
-                        )
-                        .await?
+                    responses::post(
+                        &self.client,
+                        uri,
+                        message,
+                        session,
+                        auth,
+                        (headers, max),
+                        false,
+                    )
+                    .await?
                 };
                 if is_initialize {
                     // The SDK's SSE initializer ignores JSON-RPC errors. Select the
@@ -165,7 +174,14 @@ impl StreamableHttpClient for McpRoute {
     ) -> Result<BoxedSseResponse, StreamableHttpError<Self::Error>> {
         self.guarded(
             "get",
-            self.client.get_stream(uri, session, last, auth, headers),
+            responses::get(
+                &self.client,
+                uri,
+                session,
+                last,
+                auth,
+                (headers, 16 * 1024 * 1024),
+            ),
         )
         .await
     }
@@ -180,8 +196,7 @@ impl StreamableHttpClient for McpRoute {
     ) -> Result<BoxedSseResponse, StreamableHttpError<Self::Error>> {
         self.guarded(
             "get",
-            self.client
-                .get_stream_with_max_sse_event_size(uri, session, last, auth, headers, max),
+            responses::get(&self.client, uri, session, last, auth, (headers, max)),
         )
         .await
     }

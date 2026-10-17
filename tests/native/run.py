@@ -19,7 +19,7 @@ EXTENDED = 'valid_json_control mixed_error_json mixed_error_sse mixed_error_null
 
 def worker():
     script, output = sys.argv[2:4]
-    assert script in {'cli_probe.py', 'protocol_probe.py', 'extended_protocol_probe.py', 'terminal_sse_probe.py', 'credential_coordination_probe.py', 'initialization_ping_probe.py', 'state_reader_probe.py', 'import_scale_probe.py', 'route_revision_probe.py'}
+    assert script in {'cli_probe.py', 'protocol_probe.py', 'extended_protocol_probe.py', 'terminal_sse_probe.py', 'credential_coordination_probe.py', 'initialization_ping_probe.py', 'state_reader_probe.py', 'import_scale_probe.py', 'route_revision_probe.py', 'http_media_probe.py'}
     # -I excludes ambient import paths; only reviewed, tracked sibling fixtures are added.
     sys.path.insert(0, str(SCRIPTS))
     sys.dont_write_bytecode = True
@@ -64,7 +64,8 @@ def main():
             ('initialization_ping_probe.py', 'initialization-ping', []),
             ('state_reader_probe.py', 'state-reader', []),
             ('import_scale_probe.py', 'import-scale', []),
-            ('route_revision_probe.py', 'route-revision', [])]
+            ('route_revision_probe.py', 'route-revision', []),
+            ('http_media_probe.py', 'http-media', [])]
     results = []
     for script, name, extra in jobs:
         receipt = output / (name + '.json')
