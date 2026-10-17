@@ -111,6 +111,9 @@ jobs:
             & sh ./run.sh preview
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
+      - name: Verify launcher startup boundaries
+        timeout-minutes: 7
+        run: ./scripts/check-launcher-boundaries.ps1
       - name: Verify safe cache cleanup
         run: ./scripts/check-cleanup.ps1
       - name: Package and verify downloadable native archive
@@ -155,6 +158,7 @@ jobs:
             target/nextest/ci/junit.xml
             .ci-work/rust-verification.json
             .ci-work/build-policy.json
+            .ci-work/launcher-boundaries.json
             .ci-work/native-acceptance/*.json
             .ci-work/native-acceptance/*.log
           include-hidden-files: true
