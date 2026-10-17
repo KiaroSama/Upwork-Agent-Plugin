@@ -102,7 +102,8 @@ try {
             if ($case -ne 'missing-binary') {
                 [IO.File]::Copy($BinaryPath, $native)
                 if (-not $windows) {
-                    & chmod 700 -- $native
+                    # The fixture path is absolute; BSD chmod treats a post-mode -- as a filename.
+                    & chmod 700 $native
                     if ($LASTEXITCODE -ne 0) { throw 'Cannot prepare the owned native executable.' }
                 }
             }
