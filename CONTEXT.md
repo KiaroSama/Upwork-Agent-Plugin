@@ -31,3 +31,11 @@ _Avoid_: Meeting timezone, Windows timezone setting
 **Blocked mode**:
 The selected state in which the local connector cannot contact Upwork or its authentication services.
 _Avoid_: Direct by default
+
+**Launcher**:
+A local entry point that passes the chosen invocation to the local connector.
+_Avoid_: A second connector, an independent cache validator
+
+**Startup validation**:
+The local connector's decision that an invocation and its working directories are acceptable before it creates runtime state.
+_Avoid_: Successful exit alone, wrapper preflight directory creation
