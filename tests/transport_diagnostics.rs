@@ -73,7 +73,7 @@ fn status_context_is_numeric_and_builder_details_are_not_formatted() {
     assert_eq!(diagnostics::network(&error), "http_status");
     assert!(diagnostics::network_context(&error).contains("status=503"));
     let error = reqwest::Client::new()
-        .get("http://[private-invalid")
+        .get("https://[private-invalid")
         .build()
         .unwrap_err();
     assert_eq!(diagnostics::network(&error), "request_builder");
