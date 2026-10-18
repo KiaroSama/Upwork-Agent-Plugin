@@ -77,7 +77,7 @@ async fn execute() -> Result<()> {
     let command = validated_command(&args)?;
     upwork_connector::register::prepare_cache(&root)?;
     let log = Log::new(&root, "upwork-native");
-    log.event("INFO", "Native executable started version=2.1.9.");
+    log.event("INFO", "Native executable started version=2.1.10.");
     let cleanup_command = command == "cleanup";
     let _maintenance = if cleanup_command {
         Some(upwork_connector::cleanup::lease(&root, true)?)
@@ -216,7 +216,7 @@ async fn execute() -> Result<()> {
             Ok(())
         }
         "--version" => {
-            println!("upwork-connector 2.1.9");
+            println!("upwork-connector 2.1.10");
             Ok(())
         }
         _ => Err(Error::Safe(

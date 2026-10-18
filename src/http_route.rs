@@ -63,10 +63,14 @@ impl McpRoute {
                 StreamableHttpError::Client(error) => crate::diagnostics::network(error),
                 _ => crate::diagnostics::transport(error),
             };
+            let context = match error {
+                StreamableHttpError::Client(error) => crate::diagnostics::network_context(error),
+                _ => String::new(),
+            };
             log.event(
                 "ERROR",
                 &format!(
-                    "MCP HTTP failure stage={stage} class={class} elapsed_ms={}",
+                    "MCP HTTP failure stage={stage} class={class} elapsed_ms={} {context}",
                     started.elapsed().as_millis()
                 ),
             );

@@ -37,6 +37,8 @@ pub fn transport<E: std::error::Error + Send + Sync + 'static>(
 pub fn network(error: &reqwest::Error) -> &'static str {
     if error.is_timeout() {
         "network_timeout"
+    } else if error.is_dns() {
+        "dns"
     } else if error.is_connect() {
         "proxy_or_connect"
     } else if error.is_body() {
@@ -45,9 +47,44 @@ pub fn network(error: &reqwest::Error) -> &'static str {
         "response_decode"
     } else if error.is_status() {
         "http_status"
+    } else if error.is_builder() {
+        "request_builder"
+    } else if error.is_redirect() {
+        "redirect"
+    } else if error.is_request() {
+        "request_failed"
     } else {
         "network_other"
     }
+}
+
+pub fn network_context(error: &reqwest::Error) -> String {
+    use std::error::Error;
+    let mut source: Option<&(dyn Error + 'static)> = Some(error);
+    let mut io_kind = None;
+    // Inspect types only; source messages may contain proxy credentials or URLs.
+    for _ in 0..16 {
+        let Some(current) = source else { break };
+        if let Some(io) = current.downcast_ref::<std::io::Error>() {
+            io_kind = Some(io.kind());
+            break;
+        }
+        source = current.source();
+    }
+    let status = error.status().map_or(0, |value| value.as_u16());
+    format!(
+        "timeout={} connect={} dns={} request={} body={} decode={} builder={} redirect={} status={} io_kind={:?}",
+        error.is_timeout(),
+        error.is_connect(),
+        error.is_dns(),
+        error.is_request(),
+        error.is_body(),
+        error.is_decode(),
+        error.is_builder(),
+        error.is_redirect(),
+        status,
+        io_kind,
+    )
 }
 
 #[cfg(test)]
