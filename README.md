@@ -537,7 +537,10 @@ and unrelated CWD without a launcher, and checks generated host configuration, b
 settings and SHA256. Only green exact-commit assets are released; private profiles, credentials, logs,
 caches and test keys are excluded. Artifacts expire after 14 days; Releases are durable.
 Dependabot checks Cargo/actions. CI starts only by manual dispatch; that final batch includes CodeQL
-and explicit base/head dependency review. Linux CI also runs the
+and explicit base/head dependency review. The CodeQL workflow also supports a manual analysis-only
+run to establish or repair the default-branch baseline without rebuilding release assets or rerunning
+the native test matrix. Its analysis category is stable across standalone and reusable invocations.
+Linux CI also runs the
 retained native CLI and initialization probes against its checksum-verified packaged executable:
 272 CLI assertions, 30 sign-in contracts, 20 raw/framing cases, three credential coordination cases,
 eight ordering cases for each entry point, 20 gated initialization-ping cases, 21 bounded-state cases including four valid controls, an 8,192-profile import/reimport scaling case, two route-revision cases and 28 HTTP media/body cases across eleven native suites.
