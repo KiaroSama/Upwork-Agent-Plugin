@@ -3,8 +3,8 @@ if ($IsWindows) { throw 'Unix build policy requires native Unix process groups.'
 $root = Split-Path -Parent $PSScriptRoot
 $work = Join-Path $root '.ci-work'
 $rows = @()
-$signalTool = (Get-Command kill -CommandType Application -ErrorAction Stop).Source
-$processTool = (Get-Command ps -CommandType Application -ErrorAction Stop).Source
+$signalTool = (Get-Command kill -CommandType Application -TotalCount 1 -ErrorAction Stop).Source
+$processTool = (Get-Command ps -CommandType Application -TotalCount 1 -ErrorAction Stop).Source
 # This harness owns the real build.sh; only Cargo is replaced, never a compiler invocation.
 foreach ($case in @('success', 'failure', 'quiet', 'progress', 'cancel')) {
     $sandbox = Join-Path $work ('unix build [' + [Guid]::NewGuid().ToString('N') + ']')
