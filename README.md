@@ -38,9 +38,8 @@ Open [Releases](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest
 for your machine and its matching `.sha256` file, not GitHub's source-code ZIP. No Rust, Cargo, Node,
 Git or local compilation is needed.
 
-Source version **2.1.11** is prepared in this checkout; its download names below are release targets,
-not evidence that it has been published. Until it appears in Releases, use the actual assets of the
-latest published release rather than renaming an older executable.
+Release **2.1.11** is available with the signed platform archives below. Verify the matching checksum
+and pinned owner signature before running; never rename an older executable to match a new release.
 
 | Machine | Download |
 | --- | --- |
