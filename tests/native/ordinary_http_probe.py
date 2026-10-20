@@ -182,7 +182,10 @@ def run(binary, ca, output, case):
                     break
             positive = case in ('json', 'large_json')
             if positive:
-                assert terminal == 'result' and server.gets >= 1 and server.control.is_set()
+                assert terminal == 'result' and server.gets >= 1 and server.control.is_set(), (
+                    f'case={case} terminal={terminal} gets={server.gets} control={server.control.is_set()} '
+                    f'initializations={server.initializations} ordinary_posts={server.ordinary} '
+                    f'initialized={server.initialized} child_exit={child.poll()}')
                 child.stdin.close()
                 child.wait(timeout=3)
                 assert child.returncode == 0
