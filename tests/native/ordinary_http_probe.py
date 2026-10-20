@@ -23,7 +23,10 @@ LIMIT = 16 * 1024 * 1024
 
 class Handler(protocol.Handler):
     def do_GET(self):
-        if urllib.parse.urlsplit(self.path).path != '/mcp' or self.server.case == 'prepare':
+        if (urllib.parse.urlsplit(self.path).path != '/mcp' or self.server.case == 'prepare'
+                or self.headers.get('Mcp-Session-Id') != 'ordinary-fixture-session'):
+            # OAuth probes the resource before MCP initialization; only the negotiated
+            # session GET is the held listening stream under test.
             return super().do_GET()
         self.server.gets += 1
         data = b'data: {"jsonrpc":"2.0","id":"ordinary-get-ping","method":"ping"}\n\n'
