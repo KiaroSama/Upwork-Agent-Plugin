@@ -13,12 +13,17 @@ use std::{
     time::Duration,
 };
 
+#[cfg(test)]
+mod validation_cost;
+
 #[derive(Clone)]
 pub struct Route {
     path: PathBuf,
     identity: Selection,
     revision: Option<String>,
     revoked: Arc<AtomicBool>,
+    #[cfg(test)]
+    snapshot_reads: Arc<std::sync::atomic::AtomicUsize>,
 }
 impl Route {
     pub fn new(path: PathBuf) -> Result<Self> {
@@ -34,6 +39,8 @@ impl Route {
             identity,
             revision: snapshot.revision,
             revoked: Arc::new(AtomicBool::new(false)),
+            #[cfg(test)]
+            snapshot_reads: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         })
     }
     fn changed_error() -> Error {
@@ -45,6 +52,8 @@ impl Route {
         }
         // The durable revision records changes even when both writes happen
         // between watcher ticks. Inactive edits retain it and do not disconnect.
+        #[cfg(test)]
+        self.snapshot_reads.fetch_add(1, Ordering::Relaxed);
         let unchanged = config::read_snapshot(&self.path).is_ok_and(|snapshot| {
             snapshot.revision == self.revision
                 && Selection::from_config(&snapshot.connections)

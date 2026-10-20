@@ -93,6 +93,17 @@ an incomplete set of individually validated products. Preserve and verify them a
 receipt, then explicitly resolve that exact set before retrying; never overwrite or broadly clean dist.
 The skills-only ZIP has its own landing README and no native executable or launcher.
 
+## Route-validation cost
+
+The manual CI measures three samples of sequential checks, an idle guard and two concurrent guards
+for both one-profile and8192-profile synthetic configurations. The diagnostic records wall time,
+fallible process CPU time, snapshot-read attempts, OS/architecture and available parallelism. CPU
+includes the isolated test process/runtime, not other Nextest processes; clock resolution may yield
+zero for short samples. Snapshot counts are not kernel read calls or physical disk operations.
+Instrumentation is compiled only into unit tests, not the released executable. No timing ratio is a
+pass criterion, and these measurements do not attribute host-wide load or authorize an mtime cache.
+Route revocation and existing consistency guarantees remain unchanged.
+
 ## Bounded cleanup and verification receipts
 
 Native cleanup inspects at most1000 entries plus one lookahead. `inspection_truncated=true` means the
