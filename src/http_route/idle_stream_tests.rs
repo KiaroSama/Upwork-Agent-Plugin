@@ -10,6 +10,21 @@ use std::{collections::HashMap, fs, sync::Arc, time::Duration};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio_rustls::{TlsAcceptor, rustls};
 
+fn client_tls() -> rustls::ClientConfig {
+    use rustls::pki_types::{CertificateDer, pem::PemObject};
+    let mut roots = rustls::RootCertStore::empty();
+    for cert in
+        CertificateDer::pem_slice_iter(include_bytes!("../../tests/fixtures/localhost-test.crt"))
+    {
+        roots.add(cert.unwrap()).unwrap();
+    }
+    // Pin only this fixture CA. Native macOS trust rejects the old synthetic
+    // certificate; production platform verification is deliberately unchanged.
+    rustls::ClientConfig::builder()
+        .with_root_certificates(roots)
+        .with_no_client_auth()
+}
+
 fn tls() -> TlsAcceptor {
     use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
     let certs =
@@ -47,12 +62,7 @@ async fn sdk_resumes_abrupt_tls_get_with_cursor_without_replaying_posts() {
         client: route
             .builder(false, None)
             .unwrap()
-            .add_root_certificate(
-                reqwest::Certificate::from_pem(include_bytes!(
-                    "../../tests/fixtures/localhost-test.crt"
-                ))
-                .unwrap(),
-            )
+            .tls_backend_preconfigured(client_tls())
             .build()
             .unwrap(),
         route: route.clone(),
@@ -183,12 +193,7 @@ async fn abrupt_tls_idle_get_remains_recoverable_but_partial_event_is_an_error()
         let http = route
             .builder(false, None)
             .unwrap()
-            .add_root_certificate(
-                reqwest::Certificate::from_pem(include_bytes!(
-                    "../../tests/fixtures/localhost-test.crt"
-                ))
-                .unwrap(),
-            )
+            .tls_backend_preconfigured(client_tls())
             .build()
             .unwrap();
         let log = Log::new(root.path(), "idle-tls");
