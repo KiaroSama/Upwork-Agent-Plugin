@@ -197,8 +197,10 @@ def run(binary, ca, output, case):
                 child.wait(timeout=3)
                 assert child.returncode == 1
                 diagnostics = ''.join(path.read_text(encoding='utf-8') for path in (root / 'logs').glob('*.log'))
-                expected = 'class=response_body' if case == 'truncated' else 'class=unexpected_content_type' if case == 'wrong_media' else 'class=unexpected_http_response'
-                assert expected in diagnostics
+                # Reqwest response.chunk() surfaces its body-reader failure as decode;
+                # direct bytes_stream() diagnostics use the separate response_body class.
+                expected = 'class=response_decode' if case == 'truncated' else 'class=unexpected_content_type' if case == 'wrong_media' else 'class=unexpected_http_response'
+                assert expected in diagnostics, f'case={case} expected_fixed_class={expected}'
             for reader in readers:
                 reader.join(timeout=1)
             assert not reader_failures and not any(reader.is_alive() for reader in readers), 'Protocol output did not drain cleanly'
