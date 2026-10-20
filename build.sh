@@ -1,13 +1,17 @@
 #!/bin/sh
 set -eu
 umask 077
-# Monitor mode gives this invocation its own verifiable child process group.
-if ! (set -m 2>/dev/null; case $- in *m*) exit 0;; *) exit 1;; esac); then
-    [ -z "${BASH_VERSION:-}" ] && command -v bash >/dev/null 2>&1 || { printf '%s\n' 'Build requires a shell with monitor-mode process ownership; install nothing automatically.' >&2; exit 1; }
-    unset BASH_ENV ENV
-    exec bash --noprofile --norc "$0" "$@"
-fi
-set -m
+# Probe the owning shell itself: dash can report monitor mode in a subshell
+# while disabling it in the noninteractive parent without a controlling TTY.
+set -m 2>/dev/null || :
+case $- in
+    *m*) ;;
+    *)
+        [ -z "${BASH_VERSION:-}" ] && command -v bash >/dev/null 2>&1 || { printf '%s\n' 'Build requires a shell with monitor-mode process ownership; install nothing automatically.' >&2; exit 1; }
+        unset BASH_ENV ENV
+        exec bash --noprofile --norc "$0" "$@"
+        ;;
+esac
 root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 command -v cargo >/dev/null 2>&1 || { printf '%s\n' 'Rust 1.99 or newer is required. No global installation is performed.' >&2; exit 1; }
 mkdir -p "$root/.ci-work" "$root/.cargo-cache" "$root/.ci-cache" "$root/logs"

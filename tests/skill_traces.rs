@@ -71,6 +71,8 @@ fn valid_trace(trace: &[Value], offline: bool) -> bool {
                 fresh = false;
                 proposal = false;
                 preview_approved = false;
+                confirmed = false;
+                readback = false;
             }
             "published_claim" => {
                 if !confirmed || !readback || uncertain {

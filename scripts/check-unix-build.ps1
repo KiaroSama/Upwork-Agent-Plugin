@@ -63,9 +63,16 @@ esac
             if ($LASTEXITCODE) { throw 'Cannot signal the owned Unix build.' }
         }
         if (-not $process.WaitForExit(15000)) { throw 'Unix build fixture exceeded its outer bound.' }
-        $out = $stdout.GetAwaiter().GetResult(); $null = $stderr.GetAwaiter().GetResult()
+        $out = $stdout.GetAwaiter().GetResult(); $err = $stderr.GetAwaiter().GetResult()
         $expected = switch ($case) { success { 0 } failure { 23 } quiet { 124 } progress { 124 } cancel { 143 } }
-        if ($process.ExitCode -ne $expected) { throw "Unexpected Unix build exit for $case`: $($process.ExitCode)" }
+        if ($process.ExitCode -ne $expected) {
+            # These streams contain only this isolated fixture's synthetic build diagnostics.
+            [Console]::Error.WriteLine($err)
+            foreach ($file in @(Get-ChildItem -LiteralPath (Join-Path $sandbox 'logs') -Filter '*.log' -ErrorAction SilentlyContinue)) {
+                [Console]::Error.WriteLine([IO.File]::ReadAllText($file.FullName, [Text.Encoding]::UTF8))
+            }
+            throw "Unexpected Unix build exit for $case`: $($process.ExitCode)"
+        }
         $bytes = [IO.File]::ReadAllText($installed, [Text.Encoding]::UTF8)
         if ($bytes -ne $(if ($case -eq 'success') { 'synthetic-new-binary' } else { 'synthetic-old-binary' })) { throw 'Unix build publication boundary failed.' }
         if (($out.Contains('Native connector built.')) -ne ($case -eq 'success')) { throw 'Unix build reported an incorrect completion.' }
