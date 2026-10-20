@@ -102,21 +102,29 @@ fn stream(
     log: Option<crate::logging::Log>,
     stage: &'static str,
 ) -> BoxedSseResponse {
+    let status = response.status().as_u16();
     let chunks = response.bytes_stream().scan(
         (EventLimit::default(), false),
         move |(limit, reported), chunk| {
             let chunk = chunk.map_err(|error| {
+                let idle_eof = stage == "get"
+                    && limit.at_boundary()
+                    && crate::diagnostics::network_io_kind(&error)
+                        == Some(std::io::ErrorKind::UnexpectedEof);
                 if !*reported && let Some(log) = &log {
+                    let recovery = if idle_eof { " recovery=sdk_get; no POST replay." } else { "" };
                     log.event(
-                        "ERROR",
+                        if idle_eof { "WARNING" } else { "ERROR" },
                         &format!(
-                            "MCP stream failure stage={stage} phase=body class={} {}",
+                            "MCP stream failure stage={stage} phase=body class={} http_status={status} {}{recovery}",
                             crate::diagnostics::network(&error),
                             crate::diagnostics::network_context(&error)
                         ),
                     );
                 }
                 *reported = true;
+                // Preserve failure for SDK cursor-aware GET resumption. Never
+                // turn a truncated TLS/HTTP body into successful completion.
                 std::io::Error::other("MCP stream failed.")
             });
             let bounded = chunk.and_then(|bytes| {
@@ -317,5 +325,14 @@ pub(super) async fn get(
     // Retain the SDK's two accepted exact types on GET, including its legacy
     // application/json-labelled event-stream compatibility. Never accept prefixes.
     media_type::classify(response.headers())?;
+    if let Some(log) = &log {
+        log.event(
+            "INFO",
+            &format!(
+                "MCP GET stream opened phase=headers status={}; SDK owns cursor-aware resumption, no POST replay.",
+                response.status().as_u16()
+            ),
+        );
+    }
     Ok(stream(response, max, false, log, "get"))
 }

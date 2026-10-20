@@ -9,7 +9,7 @@ The controller bounds each suite to180seconds and kills/reaps its owned process 
 Requirements: CPython3.10+ and cryptography50.0.2 from `tests/native/requirements.txt` (isolated test-only CI virtual environment). CI requires binary wheels, never an implicit dependency source build; this manifest is pinned, not a complete transitive hash lock. Invocation from the repository root:
 
 ```bash
-python3 -I tests/native/run.py --archive dist/upwork-agent-plugin-2.1.11-linux-x64.tar.gz --output .ci-work/native-acceptance
+python3 -I tests/native/run.py --archive dist/upwork-agent-plugin-2.1.12-linux-x64.tar.gz --output .ci-work/native-acceptance
 ```
 
 Output must be a new empty project-owned directory. UTF-8 JSON receipts and one UTC log per probe are retained; raw OAuth URLs/state/tokens and certificate private keys are never exported. Temporary fixture directories and the extracted executable are removed after success. A failed assertion is a real nonzero failure, not a retry or skip. Baseline audit receipts remain separate and are not counted as after-fix executions.

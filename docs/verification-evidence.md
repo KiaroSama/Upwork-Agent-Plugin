@@ -38,8 +38,17 @@ Safe diagnostics distinguish initial request, numeric response status and late s
 They do not establish which upstream provider, selected proxy or TLS peer closed a historical exchange.
 Reproduce close-before-headers, truncated body, graceful SSE end and a valid control separately, with
 request counters and bounded child ownership. Matching error labels alone do not prove equal causes.
-Current host MCP connection failure remains an external observation, not a repaired network cause.
-A live selected-route observation requires separate authorization, never an alternate direct route,
+Repeated installed GET body `UnexpectedEof` at roughly60-second intervals can coexist with a
+successful subsequent metadata request: the SDK already owns GET resumption. Only an EOF at a
+complete SSE event boundary is classified as a recoverable warning, retaining the error for the SDK,
+its cursor and the same selected route. Partial-event and POST errors retain ERROR severity. The
+actual HTTP stream status is recorded separately from any status attached to the typed error. A
+successful reopened GET is logged, not inferred from an attempted reconnect. Actual TLS fixtures
+close without `close_notify`, check complete versus partial framing, resume with `Last-Event-ID`,
+deliver another event and complete a later POST with exact request counters. These tests establish
+the local recovery/diagnostic contract, not which external peer omits TLS closure or uninterrupted
+remote availability. The configured native metadata/help call succeeded during diagnosis.
+A live selected-route observation requires authorization, never an alternate direct route,
 account write, automatic login, private packet dump or timeout increase.
 
 ## Atomic-write orphan policy

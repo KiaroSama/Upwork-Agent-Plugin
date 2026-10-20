@@ -58,19 +58,22 @@ pub fn network(error: &reqwest::Error) -> &'static str {
     }
 }
 
-pub fn network_context(error: &reqwest::Error) -> String {
+pub(crate) fn network_io_kind(error: &reqwest::Error) -> Option<std::io::ErrorKind> {
     use std::error::Error;
     let mut source: Option<&(dyn Error + 'static)> = Some(error);
-    let mut io_kind = None;
     // Inspect types only; source messages may contain proxy credentials or URLs.
     for _ in 0..16 {
         let Some(current) = source else { break };
         if let Some(io) = current.downcast_ref::<std::io::Error>() {
-            io_kind = Some(io.kind());
-            break;
+            return Some(io.kind());
         }
         source = current.source();
     }
+    None
+}
+
+pub fn network_context(error: &reqwest::Error) -> String {
+    let io_kind = network_io_kind(error);
     let status = error.status().map_or(0, |value| value.as_u16());
     format!(
         "timeout={} connect={} dns={} request={} body={} decode={} builder={} redirect={} status={} io_kind={:?}",

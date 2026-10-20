@@ -1,4 +1,6 @@
 mod event_limit;
+#[cfg(test)]
+mod idle_stream_tests;
 mod initialization;
 mod initialization_control;
 mod initialization_response;

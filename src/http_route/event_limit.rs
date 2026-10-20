@@ -7,6 +7,10 @@ pub(super) struct EventLimit {
 }
 
 impl EventLimit {
+    pub(super) fn at_boundary(&self) -> bool {
+        self.retained == 0 && self.line == 0
+    }
+
     pub(super) fn observe(&mut self, bytes: &[u8], max: usize) -> bool {
         for &byte in bytes {
             if self.cr {

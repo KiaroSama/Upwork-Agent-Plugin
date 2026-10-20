@@ -9,7 +9,7 @@
       "name": "upwork-agent-connector",
       "description": "Evidence-based job selection and profile drafting with explicit publication approvals.",
       "source": "./",
-      "version": "2.1.11"
+      "version": "2.1.12"
     }
   ]
 }
