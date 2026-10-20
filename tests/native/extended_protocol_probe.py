@@ -74,6 +74,7 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     probe.Handler.reply = extended_reply
     results = []
+    binary_digest = hashlib.sha256(args.binary.read_bytes()).hexdigest()
     try:
         with tempfile.TemporaryDirectory(prefix='extended-certs-', dir=args.output.parent) as temporary:
             root = Path(temporary)
@@ -92,7 +93,7 @@ def main() -> None:
                 if not result['passed']:
                     LOG.error('Raw-envelope contract failed for case %s.', case)
                 # Persist only sanitized receipts after each case.
-                receipt = {'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
+                receipt = {'binary_sha256': binary_digest,
                            'cases': len(results), 'passed': sum(r['passed'] for r in results),
                            'results': results}
                 args.output.write_text(json.dumps(receipt, indent=2) + '\n', encoding='utf-8')

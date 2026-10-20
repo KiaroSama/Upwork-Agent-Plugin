@@ -7,7 +7,7 @@ Version 2 replaces the Node connector with a native Rust executable. Rust owns p
 - The profile JSON schema, blocked/direct/proxy states, labels and CLI operations remain compatible.
 - The proxy importer preserves the last field as the display label, rejects invalid UTF-8 and commits no partial imports.
 - Every OAuth and MCP request uses an explicitly configured Reqwest route. Both OAuth redirect-following and no-redirect clients share that route; SDK default clients are not used. SOCKS5 is mapped to SOCKS5h for remote destination DNS.
-- The relay uses the official Rust SDK transport and preserves JSON-RPC messages instead of hardcoding Upwork tools.
+- The relay uses the official Rust SDK transport rather than hardcoding Upwork tools. It preserves request IDs, business inputs and messages except for the intentional outbound device-context timezone normalization documented under [Routing](../README.md#routing): existing supported device timezone hints become UTC and offsets become zero; absent hints, business dates/timezones and incoming messages are unchanged.
 - Diagnostic logs contain fixed application events only. SDK tracing is not enabled because upstream debug events may contain OAuth parameters.
 
 ## 2. Existing sessions

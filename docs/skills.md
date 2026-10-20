@@ -5,10 +5,9 @@
 | Skill | Purpose | Output |
 | --- | --- | --- |
 | [upwork-project-selection](../skills/upwork-project-selection/SKILL.md) | Choose worthwhile jobs before spending time or Connects | Pursue, Clarify, Pass or Stop for payment safety; three gates, evidence and next action |
-
 | [upwork-profile-management](../skills/upwork-profile-management/SKILL.md) | Prepare requested profile changes with evidence and approvals | Original/proposed diff, service preview, confirmation and read-back |
 
-Original English synthesis of the supplied two-page Persian article; ten risks, positive buying intent and three preproposal gates. Its reported 4,281 postings/15 years of experience are unverified observations, not a statistical model or official policy. The PDF is not distributed. GPL-3.0-only, like this project.
+The project-selection skill is an original English synthesis of the supplied two-page Persian article: ten risks, positive buying intent and three preproposal gates. The article's reported 4,281 postings/15 years of experience are unverified observations, not a statistical model or official policy. Profile management is a separate original workflow, not a claim derived from that article. The PDF is not distributed. GPL-3.0-only, like this project.
 
 The skill works with pasted job evidence or optional authorized MCP reads. It does not send messages, submit proposals or spend Connects without separate approval. Official Upwork skills and the native connector remain independent.
 
@@ -90,14 +89,20 @@ Reopen the workspace and invoke `/upwork-project-selection`, or ask to use the n
 
 | Host | Contract | Verification limit |
 | --- | --- | --- |
-| Claude Code | Marketplace + `.claude-plugin` | Actual validator and isolated local marketplace install/discovery |
+| Claude Code | Marketplace + `.claude-plugin` | Historical validator and isolated marketplace install/discovery reported; exact product version, OS and tested source were not retained in the public receipt, so reproducibility is unknown |
 | Codex | Portable OpenAI interface + `.codex-plugin` fallback | Official docs and structural checks; runtime not exercised |
 | Cursor | Portable root / `.cursor-plugin` / `.agents/skills` | [Official format](https://cursor.com/docs/plugins/building) and structural checks; runtime not exercised |
 | Antigravity | `.agents/skills` discovery | [Official docs](https://antigravity.google/docs/skills) and portable skill checks; runtime not exercised |
 
-Other Agent Skills clients use their own documented discovery/import path. No global installation, config overwrite or permission expansion occurs automatically. Six synthetic evaluation prompts exercise good-fit/new-client, commercial unpaid work, and payment-bypass/prompt-injection decisions; they are not proof of live marketplace success or every host runtime.
+Other Agent Skills clients use their own documented discovery/import path. No global installation, config overwrite or permission expansion occurs automatically. Nine authored evaluation prompts exist: four for selection and five for profile management. They describe expected behavior; authoring and structural validation are not executed model evaluations or proof of live marketplace success. Deterministic trace checks are a separate test tier, not a substitute for running a model with these skills.
 
 Example: “Assess this job before I spend Connects. Here is the listing and my relevant experience.” The assessment marks unknown facts honestly, balances positive intent against risk and gives one bounded next action.
+
+## Evidence and offline drafting
+
+See [verification evidence](verification-evidence.md) for trace-test versus model-run distinctions,
+native client receipt requirements and the selected-client runtime gate. Profile draft-only mode can
+use pasted facts without MCP; output stays unverified and cannot authorize live previews or writes.
 
 ## Future profile changes
 

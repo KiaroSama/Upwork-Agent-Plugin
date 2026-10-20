@@ -1,5 +1,6 @@
 mod callback_transaction;
 mod local_callback;
+mod registration;
 
 use crate::{
     credentials::Store,
@@ -114,16 +115,8 @@ pub async fn sign_in(
     let mut manager = manager(route.clone(), store.clone(), endpoint).await?;
     let resolution = manager.resolve_metadata().await?;
     manager.set_metadata(resolution.metadata);
-    let mut client = store.client_registration()?;
-    let saved_redirect = local_callback::stored_redirect(client.as_ref())?;
-    let (listener, redirect, target) = local_callback::bind(saved_redirect).await?;
-    if client.is_none() {
-        let config = manager
-            .register_client("Upwork Native Connector", &redirect, &[])
-            .await?;
-        store.save_registration(&config)?;
-        client = store.client_registration()?;
-    }
+    let (client, listener, redirect, target) =
+        registration::initialize(&mut manager, &store).await?;
     let mut request =
         AuthorizationRequest::new(&redirect).with_client_name("Upwork Native Connector");
     if let Some(id) = client

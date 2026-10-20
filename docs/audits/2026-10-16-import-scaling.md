@@ -1,4 +1,4 @@
-Before doing any work, read and fully obey the owner's actual private Rules, repository instructions and hooks. Follow the complete ordered Spec Kit chain prescribed by those Rules, including required research, specification, plan, tasks, implementation, verification and integration records. Never invent substitute Rules or claim that unpublished hooks were executed.
+> Historical engagement record, not current instructions or authorization. Directives below describe original review requirements only; they grant no current execution, publication, merge or history-rewrite permission. Evidence remains baseline-specific. See [current dispositions](README.md).
 
 # Upwork Agent Plugin — bulk import scaling audit and review handoff
 
@@ -56,23 +56,23 @@ The preparation job appends only verified measurements. Final cross-platform CI 
 
 ### Rules, Spec Kit and research
 
-Read the actual private Rules/hooks first, then follow the exact Spec Kit sequence defined there. Research official documentation and relevant upstream GitHub implementations, especially standard collection entry semantics and the repository's import contract. Record findings and decisions in the locations required by the Rules. Do not invent custom command names or treat this public report as proof that private hooks ran.
+The original review required the applicable private Rules/hooks and their Spec Kit sequence, with primary-source research on collection entry semantics and the import contract. The public report did not establish private-hook execution or supply custom command names.
 
-Read current main, the repair PR, all open PRs, local modifications and installed/package provenance before changing anything. Preserve private credentials, registrations, proxy settings, unrelated work and previous releases. Reuse the existing repair branch unless there is a genuine Rules-governed reason for another branch. Do not duplicate a fix merely because a previous response or download was interrupted.
+Its initial inventory covered main, the repair PR, then-open PRs, local changes and installed/package provenance. Credentials, registrations, proxy settings, unrelated work and prior releases were preserved. The engagement preferred its existing repair branch unless governing Rules required otherwise; an interrupted response/download was not grounds to duplicate the implementation.
 
 ### Identity and historical publication
 
-All previous and future published author and committer identities must follow the owner's requirement for `Kiaro.Sama.Dev@gmail.com`. New owner-attributed commits must have both raw fields set to that address; inspect `%ae` and `%ce`, not only web attribution, mailmaps or trailers. Correct any actually nonconforming history immediately under the governing Rules, with a verified private recovery bundle, old-to-new mapping, unchanged-content checks, coordinated refs/tags and explicit expected-ref leases. Rewriting invalidates original signatures and affects descendant/release SHAs; never misrepresent rewritten signatures or silently discard provenance.
+The original engagement required `Kiaro.Sama.Dev@gmail.com` in both raw fields of owner-attributed commits, verified through `%ae`/`%ce` rather than web labels, mailmaps or trailers. Confirmed nonconforming owner history required verified private recovery, mappings, unchanged-content checks, coordinated refs/tags and explicit expected-ref leases under the governing Rules. Rewrites invalidate signatures and affect descendant/release SHAs; provenance was retained. This records that historical procedure, not current rewrite authorization.
 
-The current repository records an explicit owner decision allowing authentic bot identities and retaining a signed Dependabot commit. Reconcile the generic email requirement with the actual Rules and that recorded owner decision before any historical rewrite. Do not reopen historical H01 solely by ignoring a legitimate Rules-approved bot exception. This audit neither rewrites main nor certifies unseen private Rules. Temporary preparation helpers are excluded from the proposed repair ancestry; new proposed commits use the required owner email.
+The repository recorded an explicit owner decision allowing authentic bot identities and retaining a signed Dependabot commit. That exception resolved H01 without rewriting legitimate bot attribution. This audit did not rewrite main or certify unseen private Rules. Temporary preparation helpers were excluded from the proposed repair ancestry; new owner-attributed proposed commits used the required owner email.
 
 ### Verify the implemented correction, not a replacement design
 
-Review the complete diff and before/after evidence. Preserve the exact first-free naming behavior. Keep deterministic complexity and differential tests; do not replace them with a benchmark that can pass despite quadratic behavior. Ensure duplicates do not reserve suffixes, skipped records do not rename existing entries, and failed imports do not publish a partial state.
+The original review compared the full diff and before/after evidence against exact first-free naming. Deterministic complexity/differential tests remained load-bearing; benchmarks alone could not prove absence of quadratic work. Duplicate suffix handling, skipped-record stability and failed-import atomicity were required contracts.
 
-Prefer PowerShell 7 on Windows. Locate the actual existing checkout under `G:\Program Files\Portable\Scripts`; do not invent or move the installation directory. Use the repository's project-contained temp/cache setup and bounded execution wrappers. Every additional script must use English comments and timestamped INFO/WARNING/ERROR/DEBUG-capable logs. Never emit tokens, passwords, authorization links/states, private request bodies or an environment dump.
+Its Windows procedure used PowerShell7, the actual existing checkout and contained temp/cache/bounded wrappers. Additional scripts required English comments and timestamped safe diagnostics; credentials, authorization links/states, private bodies and environment dumps were excluded.
 
-Run the existing source inventory, formatting, strict Clippy, all-target bounded tests, build/launcher/cleanup/package checks and security reviews. Relevant commands, through the established environment and wrappers, are:
+The historical gate included source inventory, formatting, strict Clippy, bounded all-target tests, build/launcher/cleanup/package and security checks. Recorded commands through the then-current environment were:
 
 ```powershell
 pwsh -NoProfile -File ./scripts/check.ps1
@@ -81,21 +81,21 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo nextest run --locked --all-targets --profile ci --no-fail-fast
 ```
 
-Check every native exit code. Require final Windows x64, Linux x64, macOS ARM64 and Intel jobs, the packaged Linux acceptance suites including import scaling, RustSec, CodeQL and Dependency Review. Keep production CI manually dispatched with explicit reviewed `base_ref`; do not restore automatic push/PR triggers or weaken checks. Use one final complete batch after the code is ready. Keep unsuccessful evidence, diagnose real failures and do not retry assertions until green or borrow another head's successful counts.
+That engagement required native exit-code checks, final Windows/Linux x64 and macOS ARM64/Intel jobs, Linux packaged import-scaling acceptance, RustSec, CodeQL and Dependency Review. Manual dispatch with reviewed `base_ref` and one final batch was retained. Failed evidence, assertion integrity and exact-head attribution remained requirements; these archived commands do not authorize present local execution.
 
 ### Finish all required work and PR dispositions
 
-Fix any newly reproduced defect encountered during review in the same session, add its regression and finish the affected plus full required checks. Do not leave a known code failure for another audit. Equally, do not turn an unsupported hypothesis or rejected optional redesign into a fresh defect.
+The original engagement required repair/regression checks for newly reproduced defects, not open-ended expansion from unsupported hypotheses or rejected redesigns. That historical acceptance criterion does not expand a later task.
 
-The reviewing agent must review and resolve ALL PRs according to the actual Rules. Merge eligible independently reviewed and verified PRs. When direct merging is unsuitable, correct the code/conflicts yourself, implement and verify an equivalent solution, integrate with traceable provenance, and only then close superseded PRs as those Rules require. Closing a PR without its intended verified correction is not DONE. The auditing assistant does not perform any merge or close.
+The original engagement required review and disposition of all its then-open PRs under the owner's Rules. Eligible changes required independent review and verification; supersession required an equivalent verified correction with traceable provenance. A closed PR alone was not completion evidence. The auditing assistant performed no merge or closure, and this historical text authorizes neither for a later session.
 
-After Rules/hooks, required identity handling and final checks pass, commit/push remaining approved changes, merge any necessary feature branch, and verify integrated main and the actual installed/package binary separately. Maintain one finding ledger and one evidence-backed completion receipt. A real external permission or live-account prerequisite must be named, not hidden behind a claim that every possible scenario has been tested.
+Historical closure required Rules/hooks, identity handling and final checks before approved commit/push/integration, with separate main and installed/package verification. One finding ledger and evidence-backed receipt recorded actual outcomes and external permission/account prerequisites. This is not present Git or deployment authorization, nor a claim that every possible scenario was tested.
 
 ## CI, Dependabot and optional maintenance
 
 No runtime or development dependency upgrade is needed for IM01. Cargo.toml and Cargo.lock remain unchanged; the standard library is sufficient. Daily Cargo/GitHub Actions Dependabot remains. Existing optional hashed Python requirements/pip updates and aggregate lock telemetry are maintenance decisions, not reopened runtime defects.
 
-Consider documenting expected import scale and keeping representative native measurements as diagnostic artifacts. Do not add platform-specific tight timing thresholds. GPU offload is not appropriate for this small, stateful name-allocation operation; removing redundant work is the relevant optimization and avoids new deployment dependencies.
+The optional maintenance proposal was to document import scale and retain representative native timings as diagnostic artifacts, without tight platform-specific thresholds. GPU offload was rejected for this small stateful name-allocation operation; removing redundant work avoided new deployment dependencies.
 
 ## Primary references
 

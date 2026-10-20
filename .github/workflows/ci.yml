@@ -80,7 +80,7 @@ jobs:
             Write-ToolEvent ERROR 'Pinned macOS stripping preflight failed; packaging is blocked.'
             throw
           }
-      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-nextest@0.9.148
           fallback: none
@@ -89,6 +89,10 @@ jobs:
       - name: Verify release build policy and failed-publication boundaries
         timeout-minutes: 2
         run: ./scripts/check-build-policy.ps1
+      - name: Verify Unix build process ownership without compiling
+        if: matrix.platform != 'windows-x64'
+        timeout-minutes: 2
+        run: ./scripts/check-unix-build.ps1
       - name: Check formatting
         run: ./scripts/verify.ps1 -CargoArgs @('fmt', '--check')
       - name: Check Rust lints
@@ -116,6 +120,20 @@ jobs:
         run: ./scripts/check-launcher-boundaries.ps1
       - name: Verify safe cache cleanup
         run: ./scripts/check-cleanup.ps1
+      - name: Verify literal Windows permission roots
+        if: matrix.platform == 'windows-x64'
+        timeout-minutes: 2
+        run: ./scripts/check-permission-root.ps1
+      - name: Verify signed-stage metadata policy without using a key
+        if: matrix.platform == 'windows-x64'
+        timeout-minutes: 2
+        run: ./scripts/check-signed-stage.ps1
+      - name: Verify command-specific receipts
+        timeout-minutes: 2
+        run: ./scripts/check-verification-receipts.ps1
+      - name: Verify packaging failure and provenance boundaries
+        timeout-minutes: 4
+        run: ./scripts/check-package-policy.ps1 -Platform '${{ matrix.platform }}'
       - name: Package and verify downloadable native archive
         run: ./scripts/package.ps1 -Platform '${{ matrix.platform }}' -SourceSha '${{ github.sha }}'
       - name: Verify real Linux command and initialization contracts
@@ -125,7 +143,7 @@ jobs:
           python3 -m venv .ci-work/native-probe-env
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $python = Join-Path $PWD '.ci-work/native-probe-env/bin/python'
-          & $python -m pip install --disable-pip-version-check cryptography==50.0.2
+          & $python -m pip install --disable-pip-version-check --only-binary=:all: -r tests/native/requirements.txt
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $archives = @(Get-ChildItem dist/upwork-agent-plugin-*-linux-x64.tar.gz)
           if ($archives.Count -ne 1) { throw 'Expected one packaged Linux binary.' }
@@ -156,8 +174,17 @@ jobs:
           name: verification-${{ matrix.platform }}
           path: |
             target/nextest/ci/junit.xml
-            .ci-work/rust-verification.json
+            .ci-work/verification/*.json
+            .ci-work/verification_*.log
             .ci-work/build-policy.json
+            .ci-work/unix-build-policy.json
+            .ci-work/build-provenance.json
+            .ci-work/package-policy.json
+            .ci-work/permission-root.json
+            .ci-work/signed-stage-policy.json
+            .ci-work/sign-stage_*.log
+            .ci-work/route-validation-cost.json
+            .ci-work/relay-characterization.json
             .ci-work/launcher-boundaries.json
             .ci-work/native-acceptance/*.json
             .ci-work/native-acceptance/*.log
@@ -176,7 +203,7 @@ jobs:
       - name: Confine audit installer, temp and caches to this checkout
         run: ./scripts/ci-environment.ps1
         shell: pwsh
-      - uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
+      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-audit@0.22.2
           fallback: none

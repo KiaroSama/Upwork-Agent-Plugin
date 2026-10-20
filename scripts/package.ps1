@@ -8,7 +8,9 @@ $work = Join-Path $root '.ci-work'
 $destination = Join-Path $work ("package-" + [Guid]::NewGuid().ToString('N'))
 $verify = Join-Path $work ("package smoke " + [Guid]::NewGuid().ToString('N'))
 $output = Join-Path $root 'dist'
-New-Item -ItemType Directory -Force -Path $work, $output | Out-Null
+$pending = Join-Path $output ('.pending-' + [Guid]::NewGuid().ToString('N'))
+$promoted = [Collections.Generic.List[string]]::new()
+New-Item -ItemType Directory -Force -Path $work, $output, $pending | Out-Null
 $env:TEMP = $env:TMP = $env:TMPDIR = $work
 $log = Join-Path $work ("upwork-package_" + [DateTime]::UtcNow.ToString('yyyy-MM-dd_HH-mm-ss') + '_UTC_' + [Guid]::NewGuid().ToString('N') + '.log')
 function Event([string]$level, [string]$message) {
@@ -30,22 +32,28 @@ function Smoke([string]$binary, [string[]]$arguments, [int]$expected) {
     foreach ($arg in $arguments) { $info.ArgumentList.Add($arg) }
     $child = [Diagnostics.Process]::new()
     $child.StartInfo = $info
+    $started = $false
     try {
-        if (-not $child.Start()) { throw 'Cannot start packaged binary.' }
+        $started = $child.Start()
+        if (-not $started) { throw 'Cannot start packaged binary.' }
         $child.StandardInput.Close()
         $stdout = $child.StandardOutput.ReadToEndAsync()
         $stderr = $child.StandardError.ReadToEndAsync()
-        if (-not $child.WaitForExit(5000)) { $child.Kill($true); $child.WaitForExit(); throw 'Packaged binary smoke timeout.' }
+        if (-not $child.WaitForExit(5000)) { $child.Kill($true); if (-not $child.WaitForExit(5000)) { throw 'Packaged binary could not be reaped.' }; throw 'Packaged binary smoke timeout.' }
         if ($child.ExitCode -ne $expected) { throw 'Packaged binary returned an unexpected exit code.' }
         $stderr.GetAwaiter().GetResult() | Out-Null
         return $stdout.GetAwaiter().GetResult()
     } finally {
-        if ($child.Id -and -not $child.HasExited) { $child.Kill($true); $child.WaitForExit() }
+        if ($started -and -not $child.HasExited) { $child.Kill($true); if (-not $child.WaitForExit(5000)) { throw 'Packaged binary could not be reaped.' } }
         $child.Dispose()
     }
 }
 try {
     Event INFO 'Packaging started.'
+    $checkout = @(& git -C $root rev-parse --show-toplevel)
+    if ($LASTEXITCODE -ne 0 -or $checkout.Count -ne 1 -or [IO.Path]::GetFullPath($checkout[0].Trim()) -ne [IO.Path]::GetFullPath($root)) {
+        throw 'Packaging requires this project root to be the Git checkout root.'
+    }
     $targets = @{'windows-x64'='x86_64-pc-windows-msvc'; 'linux-x64'='x86_64-unknown-linux-gnu'; 'macos-arm64'='aarch64-apple-darwin'; 'macos-x64'='x86_64-apple-darwin'}
     $hostTarget = @(& rustc -vV) | Where-Object { $_ -like 'host: *' }
     if ($LASTEXITCODE -ne 0 -or $hostTarget -ne "host: $($targets[$Platform])") { throw 'Runner architecture does not match the requested archive.' }
@@ -64,7 +72,7 @@ try {
         Copy-Item -LiteralPath $source -Destination $target
     }
     if ($Platform -eq 'linux-x64') {
-        $skillArchive = Join-Path $output "upwork-selection-plugin-$version.zip"
+        $skillArchive = Join-Path $pending "upwork-selection-plugin-$version.zip"
         if (Test-Path -LiteralPath $skillArchive) { throw 'Skills archive already exists.' }
         $skillStage = Join-Path $destination 'skills-only-stage'
         try {
@@ -73,21 +81,45 @@ try {
                 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
                 Copy-Item -LiteralPath (Join-Path $root $file) -Destination $target
             }
+            Copy-Item -LiteralPath (Join-Path $root 'docs/skills-package.md') -Destination (Join-Path $skillStage 'README.md') -Force
             [IO.Compression.ZipFile]::CreateFromDirectory($skillStage, $skillArchive)
+            $zip = [IO.Compression.ZipFile]::OpenRead($skillArchive)
+            try {
+                $members = @($zip.Entries | ForEach-Object { $_.FullName })
+                if (Compare-Object (@($files.common) | Sort-Object) ($members | Sort-Object)) { throw 'Skills archive inventory mismatch.' }
+                $landing = [IO.StreamReader]::new($zip.GetEntry('README.md').Open(), [Text.Encoding]::UTF8)
+                try { $landingText = $landing.ReadToEnd() } finally { $landing.Dispose() }
+                if (-not $landingText.StartsWith('# Upwork skills-only package')) { throw 'Skills archive landing page mismatch.' }
+                foreach ($match in [regex]::Matches($landingText, '\]\(([^)#]+)(?:#[^)]*)?\)')) {
+                    $link = $match.Groups[1].Value
+                    if ($link -notmatch '^https://' -and $link -notin $members) { throw 'Skills landing page references an absent resource.' }
+                }
+            } finally { $zip.Dispose() }
             $hash = (Get-FileHash -LiteralPath $skillArchive -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $([IO.Path]::GetFileName($skillArchive))" | Set-Content -LiteralPath "$skillArchive.sha256" -Encoding utf8NoBOM
         } finally {
             if (Test-Path -LiteralPath $skillStage) { Remove-Item -LiteralPath $skillStage -Recurse -Force }
         }
     }
-    $metadata = @{version=$version; source_sha=$SourceSha; target=$targets[$Platform]; platform=$Platform}
+    $head = (& git -C $root rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $head -ne $SourceSha) { throw 'Package source does not match the current Git checkout.' }
+    $tree = (& git -C $root rev-parse 'HEAD^{tree}').Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve package source tree.' }
+    & git -C $root diff --quiet HEAD --
+    if ($LASTEXITCODE -ne 0) { throw 'Package source has modified tracked inputs.' }
+    $untracked = @(& git -C $root ls-files --others --exclude-standard)
+    if ($LASTEXITCODE -ne 0 -or $untracked.Count) { throw 'Package source has untracked, non-ignored inputs.' }
+    $build = Get-Content -LiteralPath (Join-Path $work 'build-provenance.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $binaryHash = (Get-FileHash -LiteralPath (Join-Path $destination "bin/$binaryName") -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($build.source_sha -ne $head -or $build.source_tree -ne $tree -or $build.target -ne $targets[$Platform] -or $build.version -ne $version -or $build.binary_sha256 -ne $binaryHash -or $build.transformation -ne 'unsigned-build') { throw 'Build provenance does not match package inputs.' }
+    $metadata = @{version=$version; source_sha=$SourceSha; source_tree=$tree; binary_sha256=$binaryHash; target=$targets[$Platform]; platform=$Platform; transformation='unsigned-build'}
     $metadata | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $destination 'release.json') -Encoding utf8NoBOM
     if (-not $windows) {
         & chmod 700 (Join-Path $destination "bin/$binaryName") (Join-Path $destination 'run.sh')
         if ($LASTEXITCODE -ne 0) { throw 'Cannot preserve executable permissions.' }
     }
     $extension = if ($windows) { 'zip' } else { 'tar.gz' }
-    $archive = Join-Path $output "upwork-agent-plugin-$version-$Platform.$extension"
+    $archive = Join-Path $pending "upwork-agent-plugin-$version-$Platform.$extension"
     if (Test-Path -LiteralPath $archive) { throw 'Archive already exists; refusing to overwrite.' }
     if ($windows) {
         [IO.Compression.ZipFile]::CreateFromDirectory($destination, $archive)
@@ -102,6 +134,11 @@ try {
     $actual = @(Get-ChildItem -LiteralPath $verify -Recurse -Force -File | ForEach-Object { [IO.Path]::GetRelativePath($verify, $_.FullName).Replace('\', '/') })
     if (Compare-Object ($allowed + @('release.json') | Sort-Object) ($actual | Sort-Object)) { throw 'Extracted archive differs from the release allowlist.' }
     $binary = Join-Path $verify "bin/$binaryName"
+    if ((Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -cne $binaryHash) { throw 'Extracted executable digest differs from verified build provenance.' }
+    $extractedMetadata = Get-Content -LiteralPath (Join-Path $verify 'release.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    foreach ($key in $metadata.Keys) {
+        if ($extractedMetadata.$key -cne $metadata[$key]) { throw 'Extracted release metadata differs from verified package inputs.' }
+    }
     $entry = (Smoke $binary @('desktop-config') 0 | ConvertFrom-Json).mcpServers.'Upwork-Agent-mcp'
     if ($entry.args.Count -ne 1 -or $entry.args[0] -ne 'bridge' -or $entry.command.Replace('\\?\', '') -ne $binary) { throw 'Packaged host configuration requires a launcher or wrong executable.' }
     foreach ($key in @('TEMP', 'TMP', 'TMPDIR')) {
@@ -116,12 +153,23 @@ try {
     if ($settings.url -ne 'socks5h://127.0.0.1:1595') { throw 'Packaged local proxy default mismatch.' }
     $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $([IO.Path]::GetFileName($archive))" | Set-Content -LiteralPath "$archive.sha256" -Encoding utf8NoBOM
+    # Multi-file promotion is not crash-atomic. A failed live invocation rolls back only its own moves.
+    $products = @(Get-ChildItem -LiteralPath $pending -File)
+    foreach ($product in $products) {
+        if (Test-Path -LiteralPath (Join-Path $output $product.Name)) { throw 'Package output already exists; refusing to overwrite.' }
+    }
+    foreach ($product in $products) {
+        $final = Join-Path $output $product.Name
+        [IO.File]::Move($product.FullName, $final)
+        $promoted.Add($final)
+    }
     Event INFO 'Archive allowlist, version, blocked mode, settings and checksum verified.'
     Write-Host "Packaged and verified $([IO.Path]::GetFileName($archive))."
 } catch {
+    foreach ($owned in $promoted) { if (Test-Path -LiteralPath $owned) { Remove-Item -LiteralPath $owned -Force } }
     Event ERROR 'Packaging or archive smoke failed.'
     throw
 } finally {
-    foreach ($path in @($destination, $verify)) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force } }
+    foreach ($path in @($destination, $verify, $pending)) { if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force } }
     Event INFO 'Packaging scratch cleaned.'
 }

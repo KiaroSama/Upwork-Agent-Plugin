@@ -13,6 +13,7 @@ pub struct Report {
     pub candidates: usize,
     pub removed: usize,
     pub skipped: usize,
+    pub inspection_truncated: bool,
 }
 
 pub(crate) fn linked(meta: &fs::Metadata) -> bool {
@@ -62,8 +63,12 @@ pub fn sweep(root: &Path, apply: bool, now: SystemTime) -> Result<Report> {
         return Err(Error::Safe("Linked temporary directory refused."));
     }
     let mut report = Report::default();
-    for entry in fs::read_dir(temp)?.take(1000) {
+    for (index, entry) in fs::read_dir(temp)?.take(1001).enumerate() {
         let entry = entry?;
+        if index == 1000 {
+            report.inspection_truncated = true;
+            break;
+        }
         let path = entry.path();
         let meta = fs::symlink_metadata(&path)?;
         let name = entry.file_name();

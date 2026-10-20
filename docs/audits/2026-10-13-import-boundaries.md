@@ -1,5 +1,9 @@
 # 2026-10-13 recheck: bounded proxy-file imports
 
+> Historical engagement record, not current instructions or authorization. Imperatives below describe original requirements only; no current execution, publication, merge or history rewrite is authorized. Evidence is baseline-specific. See [current dispositions](README.md).
+
+## Archived engagement requirements and evidence
+
 First obey the owner's actual private Rules, hooks, and prescribed Spec Kit chain. This report does not replace them or claim their execution. The reviewing agent, not the auditing assistant, owns final integration and PR disposition.
 
 ## Baseline and non-duplication
@@ -28,11 +32,11 @@ Independent baseline binary recheck: 27 passing controls and two reproduced fail
 
 ## Review and completion
 
-Run inventory validation, formatting, strict Clippy, all bounded tests, launcher/cleanup/package checks, CodeQL, Cargo audit and Dependency Review on the exact final head. Keep daily Cargo/Actions Dependabot; no dependency update is needed for this standard-library fix. Do not weaken gates or retry deterministic test failures into apparent success.
+The original final-head gate required inventory, formatting, strict Clippy, bounded tests, launcher/cleanup/package checks, CodeQL, Cargo audit and Dependency Review. Daily Cargo/Actions Dependabot was retained; this standard-library fix required no dependency update. Weakened gates and assertion retries were not accepted evidence. This archived gate is not current local-execution authorization.
 
-All published author and committer emails must be `Kiaro.Sama.Dev@gmail.com`. Inspect actual Git objects, not commit-message trailers. The original review connector selected a noreply address without an override. The reviewing agent subsequently rebuilt only those five owner commits with the required raw author and committer fields, preserving every content tree, parent topology, date and message; a verified private recovery bundle is retained. The rewritten head is `476e71ec1cda2c857f239d4164277d92fde3899e`. Publication uses the exact observed-ref lease, and replacement-head CI remains required before integration. Audit earlier history and every PR commit, preserve a recovery copy, coordinate repair under the owner's Rules, and use exact leases rather than a blind force push. No global account settings or main history were changed by the auditing assistant.
+The original engagement required `Kiaro.Sama.Dev@gmail.com` in owner-attributed raw author/committer fields, inspected through Git objects rather than trailers. Its connector selected a noreply address without an override. The reviewing agent rebuilt only those five owner commits, preserving every content tree, parent topology, date and message, with verified private recovery. The rewritten head was `476e71ec1cda2c857f239d4164277d92fde3899e`. Publication used an exact observed-ref lease; replacement-head CI remained a separate integration gate. Recovery, coordination and exact leases were historical repair safeguards, not authority for a later agent to rewrite history. Legitimate bot attribution remained distinct. No global account settings or main history were changed by the auditor.
 
-Research primary documentation and record decisions in the Rules-prescribed location. Review every PR according to those Rules. Fix newly reproduced defects in the same session; merge eligible PRs after all gates, or manually integrate/correct the necessary changes and close superseded PRs with evidence. The assistant must neither merge nor close. Do not equate closed with fixed, or DONE with merely opened. Prefer the existing working branch; do not create extra branches without need.
+The original engagement required primary-source research, the owner's private workflow, review of the then-open PRs, and verified integration or documented supersession. A closed PR alone was not evidence of a corrected defect. Existing-branch reuse and integration gates described that engagement only; this report grants no later merge, closure, branch or publication authority. The auditing assistant did not merge or close PRs.
 
 ## Primary references
 

@@ -9,6 +9,16 @@ license: GPL-3.0-only
 Installing this skill grants no permission to edit an account. Run only for a user's profile-related
 request. A request to add this capability to a plugin is not a request to draft or publish a biography.
 
+## Offline draft-only mode
+
+For a draft-only request using pasted facts, no MCP connection is required. Use only supplied evidence,
+label it user-provided and potentially stale, and mark missing facts unknown. Show proposed text and
+its length; do not imply it matches the current account or invent an original diff. Do not call account,
+preview, confirmation or write tools in this mode. Connection failure does not authorize route changes
+or credential requests. If publication is later requested, start section1 with fresh account/profile/help
+reads, reconcile current fields and obtain both approvals below. Offline draft approval authorizes
+neither service-preview creation nor publication.
+
 ## 1. Establish account, requested fields and evidence
 
 Use the routed MCP connection. Inspect live tool help, then `list_accounts`; ask which account if more

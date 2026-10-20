@@ -1,12 +1,16 @@
 # OAuth callback boundary audit — 2026-10-15
 
+> Historical engagement record, not current instructions or authorization. Directives below describe original requirements only, not current execution, publication, merge, account or history-rewrite permission. See [current dispositions](README.md).
+
+## Archived engagement requirements and evidence
+
 ## Mandatory review procedure
 
-First read and obey the owner's actual private Rules, repository instructions and hooks. Execute the complete Spec Kit chain in the order required by those Rules, including current upstream/GitHub research and the required specification, plan, tasks, implementation, verification and integration records. Those private files are excluded from the public checkout; this audit does not claim to have executed unavailable hooks.
+The original engagement required the owner's private Rules, repository instructions, hooks and ordered Spec Kit chain, including primary-source research and verification/integration records. Those private files were excluded from the public checkout; this audit did not claim to execute unavailable hooks. This describes the historical review contract, not instructions for a new session.
 
-The auditing assistant may publish implemented fixes and regression tests in a PR but must not merge or close PRs/issues or update `main`. The owner's reviewing agent must review and resolve **all PRs under the Rules**: merge eligible, verified changes; otherwise correct and integrate the equivalent implementation before closing a superseded PR with a traceable receipt. Fix newly reproduced defects in the same reviewing session. A closed PR alone is not proof of a fixed defect. Reuse this correction rather than creating competing implementations or reopening previously verified findings without a new reproduction.
+The original auditing assignment permitted a correction PR but reserved merges, closures and `main` updates for the owner/reviewing agent. Its then-open PRs required verified integration or an equivalent traceable correction before supersession; a closed PR alone was not proof of a fixed defect. Regression coverage and avoiding duplicate repairs were historical acceptance criteria, not present action authority.
 
-All published owner commits, historical and future, must have raw author and committer email `Kiaro.Sama.Dev@gmail.com`. Inspect `%ae` and `%ce`, not a mailmap or coauthor trailer. If a mismatch exists, retain a verified private recovery bundle, coordinate the affected refs under the Rules, preserve content/provenance, record an old-to-new mapping and publish only with an explicit expected-ref lease. Rerun final-head checks after history repair. Do not confuse GitHub's generated test-merge identities with owner branch history. The 43 commits reachable from the baseline `main` already conform; no rewrite of that history is required by this audit.
+The original engagement required `Kiaro.Sama.Dev@gmail.com` in owner-attributed raw author/committer fields, checked through `%ae`/`%ce` rather than mailmaps or trailers. Its remediation procedure required private recovery, coordinated refs, preserved content/provenance, mappings, explicit expected-ref leases and new final-head checks. GitHub-generated test merges were distinct from owner history. The 43 commits reachable from the baseline `main` conformed, so this audit required no rewrite. These historical safeguards grant no present rewrite authority.
 
 ## Exact baseline and closure ledger
 
@@ -62,15 +66,15 @@ Fresh local baseline compilation/test execution: **98 passed, 0 failed, 0 ignore
 
 Fresh corrected local execution: formatting, `clippy --offline --locked --all-targets -- -D warnings`, and all-target tests passed: **113 tests, 0 failures, 0 ignored**. The actual compiled binary passed all four native callback cases: new registration, both saved default-port representations and recovery while a first socket is still dripping. Registration data remained unchanged. Broader native CLI/protocol results and final hosted receipts are recorded separately in the PR and downloadable handoff, tied to the exact head; do not substitute a prior-head green run.
 
-Before integration, require all final four-platform tests/builds/launcher/cleanup/packages, dependency audit, CodeQL and Dependency Review to conclude successfully. Download the final Linux artifact, verify outer and inner checksums and `release.json`, then rerun callback, CLI and protocol controls. When GitHub builds a synthetic PR merge, compare its Git tree with the proposed head before attributing its artifact to that content. A queued/cancelled job or an uploaded artifact alone is not final CI success.
+The original pre-integration gate required successful final four-platform tests/builds/launcher/cleanup/packages, dependency audit, CodeQL and Dependency Review. Its final Linux artifact needed outer/inner checksums, `release.json` and callback/CLI/protocol controls. Synthetic PR merge trees were compared with the proposed head before artifact attribution. Queued/cancelled jobs or artifact existence alone did not prove final success. These archived requirements authorize no current download, execution or integration.
 
 The harnesses use disposable loopback-only synthetic OAuth/TLS services, separate ephemeral certificates and per-child trust variables. They never forward requests to Upwork or export tokens, authorization URLs/states, headers, certificate private keys or real account data. Baseline default-port failure children are deliberately reaped; unperformed waits/tests are not counted. Real Upwork/browser/Claude account integration and private hooks remain separate owner-side checks, not falsely certified here.
 
-After review, perform the remaining commit/push/integration actions under the Rules, verify the integrated default branch and any newly published artifacts, and issue an evidence-backed DONE receipt. Do not leave a reproduced defect or an unexplained PR disposition for another round. If a real external permission/account prerequisite prevents a gate, identify it precisely rather than manufacturing a passing result.
+Historical closure required approved commit/push/integration under the Rules, separate integrated-branch/artifact verification and an evidence-backed receipt. Its reproduced defects and then-open PRs needed explicit dispositions; external permission/account prerequisites were blockers, not invented passing results. This describes that engagement, not present publication or account authority.
 
 ## Optional improvements, not additional confirmed defects
 
-Evaluate a bounded multi-connection callback design only if actual usage requires it; retain bounded memory/concurrency and exact-once exchange semantics rather than adding a generic web server unnecessarily. A curated malformed-callback/property-test corpus may expand parser coverage, but is not needed to replace the deterministic regressions above. Evaluate release artifact attestations separately under the owner's Rules. None of these suggestions requires reopening a verified defect or delaying this narrow correction for a redesign.
+The optional multi-connection callback proposal depended on demonstrated usage and bounded memory/concurrency with exact-once exchanges; it was not adopted. A malformed-callback/property corpus and release attestations were separate unadopted proposals. None reopened the verified defects or made redesign a prerequisite for that narrow correction.
 
 ## Primary references
 

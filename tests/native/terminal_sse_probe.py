@@ -27,6 +27,40 @@ INITIALIZE = {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {
 POSITIVE = {'json_success', 'success_then_error_sse'}
 
 
+def terminal_kind(message):
+    if not isinstance(message, dict) or message.get('jsonrpc') != '2.0':
+        return None
+    identity = message.get('id')
+    if type(identity) not in (int, str) or identity not in (1, '1'):
+        return None
+    if sum(key in message for key in ('method', 'result', 'error')) != 1:
+        return None
+    error = message.get('error')
+    if (isinstance(error, dict) and type(error.get('code')) is int
+            and isinstance(error.get('message'), str)):
+        return 'error'
+    if isinstance(message.get('result'), dict):
+        return 'result'
+    return None
+
+
+def bridge_message_kind(message):
+    terminal = terminal_kind(message)
+    if terminal is not None:
+        return terminal
+    if (isinstance(message, dict) and message.get('jsonrpc') == '2.0'
+            and isinstance(message.get('method'), str)
+            and not any(key in message for key in ('id', 'result', 'error'))):
+        return 'notification'
+    return 'invalid'
+
+
+def representation_rejected(result):
+    return (result['returncode'] == 1 and not result['controller_timeout']
+            and not result['protocol_invalid'] and result['first_terminal_message'] is None
+            and result['transport_rejected'])
+
+
 def reply(self, value=None, status=200, kind='application/json'):
     if not isinstance(value, dict) or 'jsonrpc' not in value or self.server.case == 'prepare':
         return ORIGINAL_REPLY(self, value, status, kind)
@@ -69,20 +103,27 @@ def execute(binary: Path, root: Path, certificates: Path, command: str, ready_ev
     env.update(SSL_CERT_FILE=str(certificates/'ca.pem'), SSL_CERT_DIR=str(certificates/'empty'))
     for key in ('TEMP', 'TMP', 'TMPDIR'):
         env[key] = str(root)
+    previous_logs = set((root / 'logs').glob('*.log'))
     child = subprocess.Popen([str(binary), '--root', str(root), command], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", env=env)
     lines: queue.Queue[str] = queue.Queue()
     errors: list[str] = []
+    reader_failures: list[bool] = []
+    def collect(stream, receive) -> None:
+        try:
+            for line in stream:
+                receive(line)
+        except (UnicodeError, OSError):
+            reader_failures.append(True)
     def read_output() -> None:
-        for line in child.stdout:
-            lines.put(line)
+        collect(child.stdout, lines.put)
     def read_errors() -> None:
-        for line in child.stderr:
-            errors.append(line)
+        collect(child.stderr, errors.append)
     readers = [threading.Thread(target=read_output, daemon=True), threading.Thread(target=read_errors, daemon=True)]
     for reader in readers:
         reader.start()
     observed = None
+    protocol_invalid = False
     completion = False
     callback = False
     start = time.monotonic()
@@ -108,10 +149,18 @@ def execute(binary: Path, root: Path, certificates: Path, command: str, ready_ev
                 response = connection.getresponse(); response.read(); connection.close()
                 callback = True
             completion |= 'Sign-in complete.' in line
-            if command == 'bridge' and line.startswith('{'):
-                message = json.loads(line)
-                if 'result' in message or 'error' in message:
-                    observed = 'error' if 'error' in message else 'result'
+            if command == 'bridge':
+                try:
+                    message = json.loads(line)
+                except json.JSONDecodeError:
+                    protocol_invalid = True
+                    break
+                kind = bridge_message_kind(message)
+                if kind == 'invalid':
+                    protocol_invalid = True
+                    break
+                if kind in ('result', 'error'):
+                    observed = kind
                     if observed == 'result' and ready_event is not None:
                         child.stdin.write(json.dumps({'jsonrpc':'2.0','method':'notifications/initialized'})+'\n')
                         child.stdin.flush()
@@ -126,10 +175,27 @@ def execute(binary: Path, root: Path, certificates: Path, command: str, ready_ev
             timed_out = True; child.kill(); child.wait(timeout=2)
         for reader in readers:
             reader.join(timeout=1)
+        protocol_invalid |= bool(reader_failures) or any(reader.is_alive() for reader in readers)
         while not lines.empty():
             line = lines.get_nowait()
             completion |= 'Sign-in complete.' in line
+            if command == 'bridge':
+                try:
+                    kind = bridge_message_kind(json.loads(line))
+                except json.JSONDecodeError:
+                    kind = 'invalid'
+                if kind in ('result', 'error') and observed is None:
+                    observed = kind
+                elif kind != 'notification':
+                    protocol_invalid = True
+        transport_rejected = False
+        for logfile in set((root / 'logs').glob('*.log')) - previous_logs:
+            for entry in logfile.read_text(encoding='utf-8').splitlines():
+                if ('MCP HTTP failure stage=post class=unexpected_http_response ' in entry
+                        or 'MCP HTTP failure stage=post class=unexpected_content_type ' in entry):
+                    transport_rejected = True
         return {'returncode': child.returncode, 'callback_sent': callback,
+                'protocol_invalid': protocol_invalid, 'transport_rejected': transport_rejected,
                 'first_terminal_message': observed, 'completion_claimed': completion,
                 'controller_timeout': timed_out, 'elapsed_seconds': round(time.monotonic()-start, 3),
                 'private_marker_in_stderr': any('private-fixture-marker' in line for line in errors)}
@@ -167,8 +233,10 @@ def run(binary: Path, ca: Path, mode: str, case: str, output_dir: Path) -> dict:
                           and result['completion_claimed'] == positive
                           and server.initialized == int(positive))
             else:
-                passed = (not result['controller_timeout'] and result['first_terminal_message'] == ('result' if positive else 'error'))
-            passed = passed and not result['private_marker_in_stderr']
+                passed = (not result['controller_timeout']
+                          and result['first_terminal_message'] == ('result' if positive else 'error')
+                          and (not positive or result['returncode'] == 0))
+            passed = passed and not result['private_marker_in_stderr'] and not result['protocol_invalid']
             result.update(case=case, mode=mode, initialized_sent=server.initialized,
                           expected_success=positive, passed=passed,
                           preparation_completed=preparation is not None)
@@ -194,12 +262,14 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     probe.Handler.reply = reply
     results = []
+    binary = args.binary.resolve()
+    binary_digest = hashlib.sha256(binary.read_bytes()).hexdigest()
     try:
         with tempfile.TemporaryDirectory(prefix='terminal-certs-', dir=args.output.parent) as temporary:
             ca = Path(temporary); probe.certificates(ca); (ca/'empty').mkdir()
             for case in args.cases:
-                results.append(run(args.binary.resolve(), ca, args.mode, case, args.output.parent))
-                receipt = {'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(),
+                results.append(run(binary, ca, args.mode, case, args.output.parent))
+                receipt = {'binary_sha256': binary_digest,
                            'mode': args.mode, 'cases': len(results), 'passed': sum(r['passed'] for r in results), 'results': results}
                 args.output.write_text(json.dumps(receipt, indent=2)+'\n', encoding='utf-8')
     finally:

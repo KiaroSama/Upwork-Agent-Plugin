@@ -63,6 +63,101 @@ fn crash_lock_child() {
 }
 
 #[test]
+fn interrupted_staging_preserves_original_and_retains_unidentified_orphan() {
+    use std::io::{BufRead, BufReader};
+    let dir = temp();
+    let root = fs::canonicalize(dir.path()).unwrap();
+    let path = root.join("config.json");
+    fs::write(&path, b"original-state").unwrap();
+    let mut command = Command::new(std::env::current_exe().unwrap());
+    command
+        .args(["--exact", "staging_crash_child", "--nocapture"])
+        .env("UPWORK_STAGING_FIXTURE", &root)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let mut child = command.spawn().unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let reader = std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            if line.unwrap().contains("STAGING_READY") {
+                let _ = tx.send(());
+                break;
+            }
+        }
+    });
+    let ready = rx.recv_timeout(Duration::from_secs(3));
+    let exclusion = if ready.is_ok() {
+        Lock::try_acquire(&path)
+    } else {
+        Ok(None)
+    };
+    let killed = child.kill();
+    let status = child.wait().unwrap();
+    reader.join().unwrap();
+    ready.unwrap();
+    killed.unwrap();
+    assert!(
+        !status.success(),
+        "Killed staging is not a successful write"
+    );
+    assert!(
+        exclusion.unwrap().is_none(),
+        "Live writer ownership must remain exclusive"
+    );
+    assert_eq!(fs::read(&path).unwrap(), b"original-state");
+    assert!(Lock::acquire(&path).is_ok());
+    let orphans: Vec<_> = fs::read_dir(&root)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| p.extension().is_some_and(|e| e == "tmp"))
+        .collect();
+    assert_eq!(orphans.len(), 1);
+    upwork_connector::register::prepare_cache(&root).unwrap();
+    upwork_connector::cleanup::sweep(
+        &root,
+        true,
+        std::time::SystemTime::now() + Duration::from_secs(25 * 3600),
+    )
+    .unwrap();
+    assert_eq!(fs::read(&orphans[0]).unwrap(), b"staged-dummy-state");
+}
+
+#[test]
+fn staging_crash_child() {
+    use std::io::{Read, Write};
+    let Some(root) = std::env::var_os("UPWORK_STAGING_FIXTURE") else {
+        return;
+    };
+    let root = std::path::Path::new(&root);
+    let _guard = Lock::acquire(&root.join("config.json")).unwrap();
+    // Model the documented pre-rename boundary with dummy bytes; no production crash hook.
+    let mut options = fs::OpenOptions::new();
+    options.create_new(true).write(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut staged = options
+        .open(root.join(format!("{}.tmp", uuid::Uuid::new_v4())))
+        .unwrap();
+    staged.write_all(b"staged-dummy-state").unwrap();
+    staged.sync_all().unwrap();
+    println!("STAGING_READY");
+    std::io::stdout().flush().unwrap();
+    let mut byte = [0];
+    let _ = std::io::stdin().read(&mut byte);
+    std::process::exit(24);
+}
+
+#[test]
 fn a_live_owner_remains_exclusive_and_a_released_lock_can_be_reused() {
     let dir = temp();
     let path = dir.path().join("config.json");

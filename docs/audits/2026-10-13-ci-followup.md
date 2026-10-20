@@ -1,6 +1,10 @@
 # Same-session CI follow-up for PR #7
 
-Obey the owner's actual private Rules/hooks and Spec Kit chain before reviewing or integrating. This addendum extends the sign-in verification audit in the same PR; it does not reopen merged PR #5. The assistant does not merge or close PRs or change main. The reviewing agent must resolve all PRs under the Rules, correct raw author/committer identities to `Kiaro.Sama.Dev@gmail.com`, fix newly reproduced defects in the same session, and require final integrated evidence before DONE.
+> Historical engagement record, not current instructions or authorization. Imperatives below describe original requirements only; they do not authorize current tests, publication, merges or history rewrites. See [current dispositions](README.md).
+
+## Archived engagement requirements and evidence
+
+The original engagement required the owner's private Rules/hooks and Spec Kit chain before review or integration. This addendum extended the sign-in verification audit in the same PR without reopening merged PR #5. Its auditor had no merge/close/main authority. The original reviewer was responsible for then-open PR dispositions, owner-attributed raw identity correction to `Kiaro.Sama.Dev@gmail.com`, reproduced-defect repairs and final integrated evidence. These historical responsibilities grant no present action authority.
 
 ## Evidence on the application-fix head
 
@@ -24,9 +28,9 @@ The pinned Rust 1.99.0 distribution source explicitly includes target LLVM runti
 
 This follow-up changes only CI plus this audit addendum. The V01/V02 Rust implementation, its 15 tests, dependency lockfile and runtime semantics remain byte-identical to the tested application-fix head. This supersedes the earlier audit's statement that CI is entirely unchanged: its assertions and security checks are unchanged, but macOS budget and toolchain preparation are intentionally corrected here.
 
-Verify the new head and content tree, require the exact-tool preflight on both macOS runners, and inspect the new ARM release log for absence of the previous loader/stripping warning. Require the overall workflow conclusion to be `success`, not merely successful individual steps or available artifacts. Rerun all four platform suites and packaging/security gates on the final head. Record the new final Linux native matrix and CLI receipts separately from the earlier three stability runs. Keep all earlier failures/cancellation receipts rather than hiding them.
+The original acceptance gate required the new head/tree, exact-tool preflight on both macOS runners, absence of the earlier ARM loader/stripping warning, and an overall `success` conclusion. Individual successful steps or uploaded artifacts were insufficient. Four-platform packaging/security and final Linux native/CLI receipts were distinct from the earlier three stability runs; failed/cancelled evidence was retained.
 
-All published commits still require identity verification/repair under the owner's Rules because the connector commit API cannot set raw author/committer email. No mailmap or trailer substitutes for this. Preserve a private recovery bundle, verify unchanged content during identity repair, use coordinated lease-protected publication, and rerun final-head checks. The assistant has not rewritten main or changed account settings.
+Owner-attributed commits were subject to raw identity verification because the connector API could not set author/committer email. Mailmaps/trailers did not replace that check. Historical remediation required private recovery, unchanged content, coordinated leases and replacement-head verification. The auditor did not rewrite main or change account settings; this paragraph grants no current rewrite authority.
 
 ## Primary references
 

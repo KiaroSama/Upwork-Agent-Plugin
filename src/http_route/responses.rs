@@ -95,11 +95,30 @@ async fn body(mut response: reqwest::Response, max: usize) -> Result<Vec<u8>, Fa
     Ok(bytes)
 }
 
-fn stream(response: reqwest::Response, max: usize, strict: bool) -> BoxedSseResponse {
-    let chunks = response
-        .bytes_stream()
-        .scan(EventLimit::default(), move |limit, chunk| {
-            let chunk = chunk.map_err(|_| std::io::Error::other("MCP stream failed."));
+fn stream(
+    response: reqwest::Response,
+    max: usize,
+    strict: bool,
+    log: Option<crate::logging::Log>,
+    stage: &'static str,
+) -> BoxedSseResponse {
+    let chunks = response.bytes_stream().scan(
+        (EventLimit::default(), false),
+        move |(limit, reported), chunk| {
+            let chunk = chunk.map_err(|error| {
+                if !*reported && let Some(log) = &log {
+                    log.event(
+                        "ERROR",
+                        &format!(
+                            "MCP stream failure stage={stage} phase=body class={} {}",
+                            crate::diagnostics::network(&error),
+                            crate::diagnostics::network_context(&error)
+                        ),
+                    );
+                }
+                *reported = true;
+                std::io::Error::other("MCP stream failed.")
+            });
             let bounded = chunk.and_then(|bytes| {
                 if limit.observe(&bytes, max) {
                     Ok(bytes)
@@ -110,7 +129,8 @@ fn stream(response: reqwest::Response, max: usize, strict: bool) -> BoxedSseResp
                 }
             });
             futures::future::ready(Some(bounded))
-        });
+        },
+    );
     sse_stream::SseStream::from_bytes_stream(chunks)
         .map(move |event| {
             let event = event?;
@@ -135,10 +155,17 @@ pub(super) async fn post(
     message: ClientJsonRpcMessage,
     session: Option<Arc<str>>,
     auth: Option<String>,
-    options: (HashMap<HeaderName, HeaderValue>, usize),
+    options: (
+        HashMap<HeaderName, HeaderValue>,
+        usize,
+        Option<crate::logging::Log>,
+    ),
     strict: bool,
 ) -> Result<StreamableHttpPostResponse, Failure> {
-    let (headers, max) = options;
+    let (headers, max, log) = options;
+    let initialize = matches!(&message, ClientJsonRpcMessage::Request(request)
+        if matches!(request.request, ClientRequest::InitializeRequest(_)));
+    let validate_envelope = strict || initialize;
     let json_max = if strict { max } else { MAX_JSON_RESPONSE_BYTES };
     let response = request(
         client.post(uri.as_ref()),
@@ -151,6 +178,17 @@ pub(super) async fn post(
     .send()
     .await
     .map_err(Failure::Client)?;
+    if !response.status().is_success()
+        && let Some(log) = &log
+    {
+        log.event(
+            "WARNING",
+            &format!(
+                "MCP HTTP response stage=post phase=headers status={}",
+                response.status().as_u16()
+            ),
+        );
+    }
     challenge(&response)?;
     let status = response.status();
     let attached = session.is_some();
@@ -206,12 +244,12 @@ pub(super) async fn post(
     })?;
     match kind {
         Kind::EventStream if status.is_success() => Ok(StreamableHttpPostResponse::Sse(
-            stream(response, max, strict),
+            stream(response, max, validate_envelope, log, "post"),
             session,
         )),
         Kind::Json => {
             let bytes = body(response, json_max).await?;
-            let parsed = if strict {
+            let parsed = if validate_envelope {
                 initialization::envelope(&bytes)
             } else {
                 serde_json::from_slice(&bytes)
@@ -223,7 +261,7 @@ pub(super) async fn post(
                 {
                     Ok(StreamableHttpPostResponse::Json(message, session))
                 }
-                Err(_) if !strict && status.is_success() && !expects_reply => {
+                Err(_) if !validate_envelope && status.is_success() && !expects_reply => {
                     Ok(StreamableHttpPostResponse::Accepted)
                 }
                 _ => Err(rejected(
@@ -243,9 +281,13 @@ pub(super) async fn get(
     session: Option<Arc<str>>,
     last: Option<String>,
     auth: Option<String>,
-    options: (HashMap<HeaderName, HeaderValue>, usize),
+    options: (
+        HashMap<HeaderName, HeaderValue>,
+        usize,
+        Option<crate::logging::Log>,
+    ),
 ) -> Result<BoxedSseResponse, Failure> {
-    let (headers, max) = options;
+    let (headers, max, log) = options;
     let response = request(
         client.get(uri.as_ref()),
         headers,
@@ -259,10 +301,21 @@ pub(super) async fn get(
     if response.status() == StatusCode::METHOD_NOT_ALLOWED {
         return Err(StreamableHttpError::ServerDoesNotSupportSse);
     }
+    if !response.status().is_success()
+        && let Some(log) = &log
+    {
+        log.event(
+            "WARNING",
+            &format!(
+                "MCP HTTP response stage=get phase=headers status={}",
+                response.status().as_u16()
+            ),
+        );
+    }
     challenge(&response)?;
     response.error_for_status_ref().map_err(Failure::Client)?;
     // Retain the SDK's two accepted exact types on GET, including its legacy
     // application/json-labelled event-stream compatibility. Never accept prefixes.
     media_type::classify(response.headers())?;
-    Ok(stream(response, max, false))
+    Ok(stream(response, max, false, log, "get"))
 }

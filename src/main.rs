@@ -77,7 +77,25 @@ async fn execute() -> Result<()> {
     let command = validated_command(&args)?;
     upwork_connector::register::prepare_cache(&root)?;
     let log = Log::new(&root, "upwork-native");
-    log.event("INFO", "Native executable started version=2.1.10.");
+    log.event("INFO", "Native executable started version=2.1.11.");
+    let result = dispatch(root, &args, command, &log).await;
+    if let Err(Error::Auth(error)) = &result {
+        log.event(
+            "ERROR",
+            &format!(
+                "OAuth failure class={}",
+                upwork_connector::diagnostics::auth(error)
+            ),
+        );
+    }
+    log.event(
+        if result.is_ok() { "INFO" } else { "ERROR" },
+        "Native executable stopped; private input suppressed.",
+    );
+    result
+}
+
+async fn dispatch(root: PathBuf, args: &[String], command: &str, log: &Log) -> Result<()> {
     let cleanup_command = command == "cleanup";
     let _maintenance = if cleanup_command {
         Some(upwork_connector::cleanup::lease(&root, true)?)
@@ -102,7 +120,7 @@ async fn execute() -> Result<()> {
         Some(runtime.ok_or(Error::Safe("Maintenance is busy. Retry after it finishes."))?)
     };
     let path = root.join("config/connections.json");
-    let result = match command {
+    match command {
         "cleanup" => {
             let apply = match args.get(1).map(String::as_str) {
                 None if args.len() == 1 => false,
@@ -216,25 +234,11 @@ async fn execute() -> Result<()> {
             Ok(())
         }
         "--version" => {
-            println!("upwork-connector 2.1.10");
+            println!("upwork-connector 2.1.11");
             Ok(())
         }
         _ => Err(Error::Safe(
             "Usage: upwork-connector [--root PATH] menu|status|import PATH|add|select NAME|local-settings [set]|local-proxy|direct|block|sign-in|bridge|register|desktop-config",
         )),
-    };
-    if let Err(Error::Auth(error)) = &result {
-        log.event(
-            "ERROR",
-            &format!(
-                "OAuth failure class={}",
-                upwork_connector::diagnostics::auth(error)
-            ),
-        );
     }
-    log.event(
-        if result.is_ok() { "INFO" } else { "ERROR" },
-        "Native executable stopped; private input suppressed.",
-    );
-    result
 }

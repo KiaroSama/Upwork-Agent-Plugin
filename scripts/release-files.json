@@ -4,6 +4,7 @@
     "LICENSE",
     "docs/skills.md",
     "docs/migration.md",
+    "docs/verification-evidence.md",
     "plugin.json",
     ".claude-plugin/plugin.json",
     ".claude-plugin/marketplace.json",

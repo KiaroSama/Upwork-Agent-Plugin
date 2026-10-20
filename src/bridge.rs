@@ -150,6 +150,21 @@ where
 pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
     let log = Log::new(root, "upwork-bridge");
     log.event("INFO", "Native connector started.");
+    let result = run_session(root, endpoint, sign_in, &log).await;
+    if let Err(Error::Transport(class)) = &result {
+        log.event(
+            "ERROR",
+            &format!("MCP relay failure class={class}; no request replay."),
+        );
+    }
+    log.event(
+        if result.is_ok() { "INFO" } else { "ERROR" },
+        "Native connector stopped; no direct fallback.",
+    );
+    result
+}
+
+async fn run_session(root: &Path, endpoint: &str, sign_in: bool, log: &Log) -> Result<()> {
     let route = Route::new(root.join("config/connections.json"))?;
     let store = Store { root: root.into() };
     if !sign_in && !store.available()? {
@@ -160,7 +175,7 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
     let manager = if sign_in {
         tokio::select! {
             _=route.changed()=>return Err(Error::Safe("Route changed during sign-in; no session completion claimed.")),
-            result=auth::sign_in(route.clone(),store.clone(),endpoint,&log)=>result?,
+            result=auth::sign_in(route.clone(),store.clone(),endpoint,log)=>result?,
         }
     } else {
         let mut m = auth::manager(route.clone(), store.clone(), endpoint).await?;
@@ -207,7 +222,7 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         crate::http_route::McpRoute::new(route.clone())?.with_log(log.clone()),
         manager,
     );
-    let result = relay_logged(
+    relay_logged(
         client,
         route,
         endpoint,
@@ -215,18 +230,7 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
         tokio::io::stdout(),
         Some(log.clone()),
     )
-    .await;
-    if let Err(Error::Transport(class)) = &result {
-        log.event(
-            "ERROR",
-            &format!("MCP relay failure class={class}; no request replay."),
-        );
-    }
-    log.event(
-        if result.is_ok() { "INFO" } else { "ERROR" },
-        "Native connector stopped; no direct fallback.",
-    );
-    result
+    .await
 }
 
 #[cfg(test)]

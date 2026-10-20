@@ -33,7 +33,7 @@ fn read_limited(reader: impl Read, limit: usize) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
-fn open_regular(path: &Path, refuse_links: bool) -> Result<fs::File> {
+pub(crate) fn open_regular(path: &Path, refuse_links: bool) -> Result<fs::File> {
     let mut options = fs::OpenOptions::new();
     options.read(true);
     #[cfg(unix)]

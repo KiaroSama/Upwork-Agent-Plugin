@@ -101,7 +101,15 @@ fn profile_workflow_and_competition_are_packaged_with_approval_boundaries() {
     ))
     .unwrap();
     assert_eq!(evaluations["skill_name"], "upwork-profile-management");
-    assert_eq!(evaluations["evals"].as_array().unwrap().len(), 2);
+    let cases = evaluations["evals"].as_array().unwrap();
+    assert_eq!(cases.len(), 5);
+    let mut ids = std::collections::HashSet::new();
+    for case in cases {
+        assert!(ids.insert(case["id"].as_u64().unwrap()));
+        assert!(case["prompt"].as_str().unwrap().len() > 100);
+        assert!(case["expected_output"].as_str().unwrap().len() > 40);
+        assert!(case["files"].as_array().unwrap().is_empty());
+    }
     let allowlist: Value =
         serde_json::from_str(include_str!("../scripts/release-files.json")).unwrap();
     for file in [

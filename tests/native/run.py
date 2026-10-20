@@ -19,7 +19,7 @@ EXTENDED = 'valid_json_control mixed_error_json mixed_error_sse mixed_error_null
 
 def worker():
     script, output = sys.argv[2:4]
-    assert script in {'cli_probe.py', 'protocol_probe.py', 'extended_protocol_probe.py', 'terminal_sse_probe.py', 'credential_coordination_probe.py', 'initialization_ping_probe.py', 'state_reader_probe.py', 'import_scale_probe.py', 'route_revision_probe.py', 'http_media_probe.py'}
+    assert script in {'ordinary_http_probe.py', 'probe_oracle_test.py', 'cli_probe.py', 'protocol_probe.py', 'extended_protocol_probe.py', 'terminal_sse_probe.py', 'credential_coordination_probe.py', 'initialization_ping_probe.py', 'state_reader_probe.py', 'import_scale_probe.py', 'route_revision_probe.py', 'http_media_probe.py'}
     # -I excludes ambient import paths; only reviewed, tracked sibling fixtures are added.
     sys.path.insert(0, str(SCRIPTS))
     sys.dont_write_bytecode = True
@@ -56,7 +56,8 @@ def main():
         binary = output / 'upwork-connector'
         binary.write_bytes(bundle.extractfile(bins[0]).read())
         binary.chmod(0o700)
-    jobs = [('cli_probe.py', 'cli', []), ('protocol_probe.py', 'protocol', ['--assert-fixed']),
+    binary_digest = hashlib.sha256(binary.read_bytes()).hexdigest()
+    jobs = [('probe_oracle_test.py', 'probe-oracles', []), ('cli_probe.py', 'cli', []), ('protocol_probe.py', 'protocol', ['--assert-fixed']),
             ('extended_protocol_probe.py', 'extended', ['--cases', *EXTENDED]),
             ('terminal_sse_probe.py', 'sign-in', ['--mode', 'sign-in']),
             ('terminal_sse_probe.py', 'bridge', ['--mode', 'bridge']),
@@ -65,9 +66,16 @@ def main():
             ('state_reader_probe.py', 'state-reader', []),
             ('import_scale_probe.py', 'import-scale', []),
             ('route_revision_probe.py', 'route-revision', []),
-            ('http_media_probe.py', 'http-media', [])]
+            ('http_media_probe.py', 'http-media', []),
+            ('ordinary_http_probe.py', 'ordinary-http', [])]
+    discovered = {path.name for path in SCRIPTS.glob('*.py')} - {'run.py'}
+    assert discovered == {script for script, _, _ in jobs}, 'Native suite inventory differs from the CI controller'
+    generation = binary.stat()
+    binary.chmod(0o500)
     results = []
     for script, name, extra in jobs:
+        current = binary.stat()
+        assert (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns) == (generation.st_dev, generation.st_ino, generation.st_size, generation.st_mtime_ns), 'Owned executable changed between suites'
         receipt = output / (name + '.json')
         command = [sys.executable, '-I', str(Path(__file__).resolve()), '--worker', script, str(receipt),
                    '--binary', str(binary), '--output', str(receipt), *extra]
@@ -90,11 +98,13 @@ def main():
                 child.wait(timeout=5)
         (output / (name + '-controller.log')).write_bytes(captured)
         results.append({'suite': name, 'exit': child.returncode, 'seconds': round(time.monotonic()-started, 3), 'reaped': True})
-        (output / 'summary.json').write_text(json.dumps({'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+        (output / 'summary.json').write_text(json.dumps({'binary_sha256': binary_digest,
                                                         'suites': results}, indent=2), encoding='utf-8')
         print(name + ': exit=' + str(child.returncode), flush=True)
         if child.returncode:
             raise SystemExit(child.returncode)
+    current = binary.stat()
+    assert (current.st_dev, current.st_ino, current.st_size, current.st_mtime_ns) == (generation.st_dev, generation.st_ino, generation.st_size, generation.st_mtime_ns), 'Owned executable changed during the final suite'
     binary.unlink()
 
 

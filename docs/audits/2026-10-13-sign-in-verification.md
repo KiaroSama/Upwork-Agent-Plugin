@@ -1,10 +1,14 @@
 # Sign-in verification recheck — 2026-10-13
 
+> Historical engagement record, not current instructions or authorization. Directives below describe the original engagement only, not current permission to execute, publish, merge or rewrite history. Receipts are baseline-specific. See [current dispositions](README.md).
+
+## Archived engagement requirements and evidence
+
 ## Mandatory review authority
 
-Read and obey the owner's actual private Rules and hooks before doing any work. Follow the complete Spec Kit chain prescribed there, including research, specification, plan, tasks, implementation, verification and integration receipts in the locations required by those Rules. Private Rules, AGENTS/CLAUDE files and `.specify` are not published in this checkout; their execution is not claimed by this audit.
+The original engagement required the owner's actual private Rules/hooks and their complete Spec Kit chain, including research and verification/integration receipts. Those private materials were not published in this checkout, and the audit did not claim their execution. This archived requirement does not direct or authorize work in a later session.
 
-This implemented correction is in [PR #7](https://github.com/KiaroSama/Upwork-Agent-Plugin/pull/7). The auditing assistant must not merge or close any PR or issue. The owner's reviewing agent must review and dispose of every PR according to the Rules: merge eligible verified changes, or implement and verify a corrected equivalent before closing a superseded PR with traceable evidence. Fix newly reproduced defects in the same session rather than leaving an unexplained remainder. Do not declare DONE merely because a PR exists or was closed.
+This correction was proposed in [PR #7](https://github.com/KiaroSama/Upwork-Agent-Plugin/pull/7). The original auditor had no merge/close authority. The original reviewer was responsible for verified disposition of its then-open PRs and reproduced defects; a PR's existence or closure alone did not satisfy that historical completion criterion. No present action is authorized here.
 
 ## Baseline and previous findings
 
@@ -56,19 +60,19 @@ The three original owner commits were corrected to the required raw public autho
 
 Fifteen Rust tests are added inside the private verification module. Eight test groups cover IDs, envelopes, required fields, field types, supported lifecycle versions, optional metadata and safe errors. Seven use real loopback HTTP/SSE transport to verify exact readiness counts, explicit initialization errors, JSON/SSE positive cases, and failed readiness publication without replay. All fixtures have bounded deadlines and reap their owned server tasks.
 
-The existing four-platform workflow discovers the library tests automatically. Require formatting, strict Clippy, every nextest suite, all native packaging/launcher/cleanup checks, dependency audit, CodeQL and dependency review on the final reviewed content. Preserve failed-run evidence; do not weaken checks or retry assertions until green. The first PR run stopped at two rustfmt layout differences before compilation; this same-session follow-up corrects them. A formatting failure is not a successful test run.
+The four-platform workflow discovered the library tests automatically. The original final-content gate included formatting, strict Clippy, every Nextest suite, native packaging/launcher/cleanup, dependency audit, CodeQL and dependency review. Failed evidence was retained rather than weakened or retried into apparent success. The first PR run stopped at two rustfmt differences before compilation; this follow-up corrected them, without counting the formatting failure as a test pass.
 
-Final hosted results and native before/after receipts belong in the PR conversation, tied to the final head and content tree. GitHub PR CI may build a synthetic merge SHA: verify its tree equals the reviewed head rather than falsely labeling that merge SHA as an integrated main commit. Run the same native 30-case contract matrix and CLI regression suite on the checksum-verified final Linux artifact. A final test receipt must distinguish local native execution from hosted Rust compilation/tests and must not borrow earlier-head success.
+Original hosted/native before-and-after receipts were tied to the final head/tree. A synthetic GitHub test-merge SHA required tree comparison before attribution; it was not actual main integration. The engagement required the 30-case native matrix and CLI suite on its checksum-verified final Linux artifact, with local native and hosted compilation evidence kept distinct. These historical acceptance criteria authorize no present local compilation or duplicate test run.
 
 Dependabot already covers Cargo and GitHub Actions daily. No duplicate updater or forced dependency migration is justified by V01/V02. The prior dependency-review prerequisite is not automatically treated as a new failure: this PR's first dependency review passed.
 
 ## Commit identity and integration gate
 
-All historical and future published author and committer identities must use `Kiaro.Sama.Dev@gmail.com` as required by the owner. The connector's commit action has no identity arguments and created this PR's commits with the account's noreply email. Those original identities were explicitly noncompliant; the reviewing agent repaired the three commits before integration. New final-head verification remains required, not waived by the repair.
+The original engagement required `Kiaro.Sama.Dev@gmail.com` for owner-attributed raw author/committer fields. The connector's commit action had no identity arguments and created this PR's commits with the account's noreply email. Those owner-attributed identities were noncompliant; the reviewing agent repaired the three commits before integration. The repair did not waive that engagement's final-head verification gate or imply that legitimate bot attribution needed rewriting.
 
-The reviewing agent must inventory raw `%ae` and `%ce` values, retain a verified private recovery bundle and old-to-new mapping, coordinate affected refs under the Rules, repair nonconforming owner history, and verify unchanged content trees/topology and intended identity changes before a lease-protected push. Preserve provenance and handle signed commits/tags under the Rules; never silently discard someone else's work. A mailmap or coauthor trailer does not repair raw Git identities. Rerun final-head checks after any history repair. The assistant has not changed main or global account settings.
+That engagement's identity repair required raw `%ae`/`%ce` inspection, a verified private recovery bundle/mapping, coordinated affected refs, unchanged trees/topology and intended owner-identity verification before a lease-protected push. Provenance, other contributors and signatures were preservation constraints; mailmaps/trailers did not repair raw identities. Final-head checks followed the repair. The auditor did not change main or global account settings, and this record authorizes no later rewrite.
 
-Do not make another competing implementation or unnecessary branch for these defects. Use this PR's existing branch unless the Rules require otherwise. Resolve all findings and all PR dispositions in the reviewing session, verify integrated main and final artifacts, and produce a final evidence-backed DONE receipt. If a real external permission or live-account requirement blocks completion, name it accurately rather than manufacturing a passing result.
+The original engagement required reuse of its existing implementation branch unless governing Rules required otherwise, disposition of its findings and then-open PRs, and separate integrated-main/artifact evidence. External permission or live-account prerequisites were explicit blockers rather than fabricated passes. This records past acceptance criteria, not current branch, account or publication authorization.
 
 ## Primary references
 
@@ -77,4 +81,4 @@ Do not make another competing implementation or unnecessary branch for these def
 - [Repository CI workflow](https://github.com/KiaroSama/Upwork-Agent-Plugin/blob/d1af5025aac712a10463b65140f0f895e132397f/.github/workflows/ci.yml)
 - [Repository Dependabot configuration](https://github.com/KiaroSama/Upwork-Agent-Plugin/blob/d1af5025aac712a10463b65140f0f895e132397f/.github/dependabot.yml)
 
-Continue researching official upstream documentation and relevant GitHub implementations when making additional changes, and record research in the locations mandated by the private Rules. Optional improvements must be evaluated separately from confirmed defects; do not turn this narrowly reproduced correction into an unbounded redesign.
+The original engagement required fresh official/upstream research for additional changes, recorded under the private Rules. Optional improvements were evaluated separately from confirmed defects; the narrowly reproduced correction did not authorize an unbounded redesign.

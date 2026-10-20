@@ -1,6 +1,6 @@
 param([Parameter(Mandatory)][string]$ProjectRoot)
 $ErrorActionPreference = 'Stop'
-$root = (Resolve-Path $ProjectRoot).Path
+$root = (Resolve-Path -LiteralPath $ProjectRoot).Path
 $user = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
 foreach ($name in @('config', '.state', 'logs', '.cache')) {
     $path = Join-Path $root $name

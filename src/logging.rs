@@ -58,17 +58,72 @@ impl Log {
             self.component,
             message
         );
-        if let Ok(mut lock) = self.file.lock() {
-            if let Some(f) = lock.as_mut() {
-                if f.write_all(line.as_bytes())
-                    .and_then(|()| f.flush())
-                    .is_err()
-                {
-                    eprintln!("Diagnostic log write failed.");
-                }
-            } else {
-                eprint!("{line}");
+        self.emit(&line, &mut std::io::stderr().lock());
+    }
+
+    fn emit(&self, line: &str, fallback: &mut impl Write) {
+        let mut lock = self
+            .file
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(file) = lock.as_mut() {
+            if file
+                .write_all(line.as_bytes())
+                .and_then(|()| file.flush())
+                .is_ok()
+            {
+                return;
             }
+            *lock = None;
+            let _ = fallback
+                .write_all(b"Diagnostic log write failed; using safe stderr diagnostics.\n");
         }
+        let _ = fallback.write_all(line.as_bytes());
+        let _ = fallback.flush();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn read_only_sink_is_disabled_and_poisoned_mutex_remains_usable() {
+        fs::create_dir_all(".ci-work").unwrap();
+        let dir = tempfile::tempdir_in(".ci-work").unwrap();
+        let path = dir.path().join("sink");
+        fs::write(&path, b"preserve").unwrap();
+        let log = Log {
+            file: Arc::new(Mutex::new(Some(File::open(&path).unwrap()))),
+            component: "fixture",
+        };
+        let mut fallback = Vec::new();
+        log.emit(
+            "[ERROR] [fixture] Controlled safe fallback event.\n",
+            &mut fallback,
+        );
+        log.emit("[WARNING] [fixture] Later safe event.\n", &mut fallback);
+        let text = String::from_utf8(fallback).unwrap();
+        assert_eq!(text.matches("Diagnostic log write failed").count(), 1);
+        assert!(text.contains("[ERROR] [fixture] Controlled safe fallback event."));
+        assert!(text.contains("[WARNING] [fixture] Later safe event."));
+        assert!(log.file.lock().unwrap().is_none());
+        assert_eq!(fs::read(&path).unwrap(), b"preserve");
+        let shared = log.file.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = shared.lock().unwrap();
+            panic!("controlled poison");
+        })
+        .join();
+        let mut fallback = Vec::new();
+        log.emit(
+            "[WARNING] [fixture] Controlled event after poison.\n",
+            &mut fallback,
+        );
+        assert!(
+            String::from_utf8(fallback)
+                .unwrap()
+                .contains("Controlled event after poison.")
+        );
     }
 }

@@ -1,4 +1,4 @@
-Before doing any work, read and fully obey the owner's applicable private Rules, repository instructions and hooks. Follow the complete, ordered Spec Kit chain defined in those Rules, including the required research and verification records. Do not invent replacement Rules or claim that unpublished hooks were executed.
+> Historical engagement record, not current instructions or authorization. All directives below describe original review requirements only; they grant no execution, publication, merge, account or history-rewrite permission. Evidence remains baseline-specific. See [current dispositions](README.md).
 
 # Credential coordination audit — continuation and integration handoff
 
@@ -10,9 +10,9 @@ Continuation baseline: `d387b624440eacb59f8eddb093c126b51310ca99` (the already-o
 
 ## Scope, authority and non-repetition
 
-Continue PR #12; do not create a competing refresh implementation or another PR for its already-fixed contention behavior. The previously merged SSE terminal-response correction in PR #11 and the earlier initialization-envelope, callback, CLI/import and registration fixes are not reopened by this continuation.
+The continuation reused PR #12 rather than creating a competing refresh implementation. Previously merged SSE terminal-response work in PR #11 and earlier initialization-envelope, callback, CLI/import and registration fixes stayed outside its reopened scope.
 
-The auditing assistant may publish/update this PR but must not merge or close any PR or issue, update main, publish releases, replace the user's installed binary, or modify private account state. The owner's reviewing agent must complete the integration and all PR dispositions under the actual Rules after the required checks pass.
+The original auditor's authority covered updates to that PR, not merges, closures, main, releases, installed binaries or private account state. Integration and disposition of its then-open PRs belonged to the owner/reviewer after the applicable checks. These historical role boundaries grant no current publication or integration permission.
 
 The local container execution service returned errors before any new local compilation could run. New execution evidence in this continuation comes from GitHub-hosted runners. Native tests execute real compiled connector processes against synthetic local TLS/OAuth services. No request is forwarded to Upwork; no real account login, proposal, message, purchase or Connects expenditure occurs. Disposable trust is limited to child environments, not the host trust store.
 
@@ -66,43 +66,43 @@ The measured receipts appended below are from that hosted before/after execution
 
 ### 1. Rules, Spec Kit, current research and working-state inventory
 
-Read the actual Rules/hooks first and execute the exact Spec Kit sequence defined there, including research, specification, plan, tasks, implementation, verification and integration records as applicable. Do not guess custom command names. Research current official upstream documentation and relevant GitHub implementations, especially the pinned SDK's credential-store, refresh and code-exchange contracts, and record decisions where the Rules require.
+The original engagement required the applicable Rules/hooks and their Spec Kit sequence, with research, specification, design, tasks and verification/integration records. Its primary-source research covered the pinned SDK's credential-store, refresh and code-exchange contracts. The public report neither supplied private custom command names nor established that unavailable hooks ran.
 
-Inventory current main, PR #12's actual head, every open PR, local modifications, configured hooks and installed/package provenance before integration. Preserve unrelated local work and all private authentication/proxy/client files. Reuse the existing branch unless the Rules establish a genuine need for another. Determine whether a fix is already integrated from its code and tests, not from a title alone.
+The original integration inventory covered main, PR #12's actual head, then-open PRs, local modifications, configured hooks and installed/package provenance. Its preservation constraints included unrelated work and private authentication/proxy/client files. Branch reuse was preferred unless governing Rules required otherwise, and integration was determined from code/tests rather than titles.
 
 ### 2. Required identity for all past and future publication
 
-Every published author and committer email must be `Kiaro.Sama.Dev@gmail.com`, for prior history and all future commits. Inspect raw Git `%ae` and `%ce`; a web attribution label, mailmap or coauthor trailer is not a substitute. Verified outgoing commits must use both required raw fields before they are attached to the PR.
+The original engagement required `Kiaro.Sama.Dev@gmail.com` for owner-attributed author/committer fields and inspection of raw Git `%ae`/`%ce`, rather than relying on web labels, mailmaps or trailers. Its outgoing owner-attributed commits were subject to that gate; legitimate bot attribution was not a request to impersonate the owner.
 
 Temporary connector-created staging helper objects are not part of the proposed commit ancestry. Canonical commits are created with the required author and committer, and temporary helper workflows are excluded from the proposed tree. The assistant does not rewrite main or alter global account settings.
 
-If a nonconforming historical publication is found, immediately correct it under the owner's Rules: retain and verify a private recovery bundle; record exact old refs and an old-to-new mapping; coordinate affected branches/tags and signatures; preserve intended trees, topology and provenance; use explicit expected-ref leases; and reverify the rewritten head. Never blindly force-push or silently discard another writer's changes. Final integration commits must use the same required identity.
+The original proposed remediation for confirmed nonconforming owner publication required verified private recovery, exact ref/mapping records, coordinated tags/signatures, preserved trees/topology/provenance, explicit expected-ref leases and rewritten-head verification. It excluded discarding another writer's work. This historical procedure authorizes no present rewrite and does not replace legitimate bot identities with the owner's address.
 
 ### 3. Verify both writer directions and the actual final binary
 
-Review the implemented diff and the before/after receipts rather than rewriting the solution from scratch. Confirm that both refresh and manual callback use one shared cross-process transaction lock, while save does not recursively acquire it. Verify invalid destinations, timeout, cancellation, terminated owners, separate installation roots, token rotation, failed/forged callbacks and preserved private state.
+The original review compared the implemented diff and before/after receipts rather than replacing the design. Both refresh and manual callback shared one cross-process transaction lock; save remained nonrecursive. Acceptance covered invalid destinations, timeout, cancellation, terminated owners, separate roots, rotation, failed/forged callbacks and private-state preservation.
 
-Use PowerShell 7 on the owner's Windows system. Resolve the existing checkout beneath `G:\Program Files\Portable\Scripts` without inventing an installation path or moving files. Keep temporary files, caches and test evidence project-contained through the repository's existing setup. Any additional script must have English comments and timestamped INFO/WARNING/ERROR/DEBUG-capable logging. Do not log passwords, tokens, authorization URLs/states, private request bodies or the entire environment.
+Its Windows procedure used PowerShell7 and the actual existing checkout, with project-contained temporary files/caches/evidence. Additional scripts required English comments and timestamped safe diagnostic levels. Secrets, authorization URLs/states, private bodies and environment dumps were excluded. These historical constraints did not authorize installation relocation or disclosure.
 
-Run the existing project check, formatting, strict Clippy, bounded all-target tests, native build/launcher/cleanup/package checks and security gates. Relevant commands include `pwsh -NoProfile -File ./scripts/check.ps1`, `cargo fmt --all --check`, `cargo clippy --locked --all-targets -- -D warnings`, and `cargo nextest run --locked --all-targets --profile ci --no-fail-fast`, invoked using the repository's project-contained environment and the actual Rules. Check every native exit status.
+The engagement's verification gate included the existing project inventory, formatting, strict Clippy, bounded all-target tests, native build/launcher/cleanup/package checks and security checks. Its recorded commands included `pwsh -NoProfile -File ./scripts/check.ps1`, `cargo fmt --all --check`, `cargo clippy --locked --all-targets -- -D warnings`, and `cargo nextest run --locked --all-targets --profile ci --no-fail-fast`, through the then-current contained environment with native exit-status checks.
 
-Require final Windows x64, Linux x64, macOS Intel and macOS ARM results; Linux packaged acceptance must include the new coordination probe plus every previous suite. Require CodeQL, cargo-audit and Dependency Review. Preserve failed and interrupted attempts. Diagnose causes rather than adding assertion retries, ignoring tests, weakening safety checks or calling cancelled jobs successful.
+Its final acceptance required Windows x64, Linux x64, macOS Intel/ARM, all previous Linux packaged suites plus coordination, CodeQL, cargo-audit and Dependency Review. Failed/interrupted attempts were retained; retries, ignored tests, weakened safety or cancelled jobs were not substitutes for success. These are historical gates, not instructions to execute those commands locally today.
 
 ### 4. Finish every PR disposition and newly found defect in the same session
 
-Review every open PR according to the owner's Rules; do not exempt PRs with a blanket unrelated-PR instruction. Merge each eligible, independently reviewed and fully verified PR. When direct merging is unsuitable, fix the code/conflicts yourself, implement and verify the correct equivalent, integrate it with traceable provenance, and then close the superseded PR as the Rules require. Closing a PR without its intended correction implemented and verified is not DONE.
+The original engagement required disposition of its then-open PRs under the owner's Rules: independently reviewed and verified integration, or a traceable equivalent correction before supersession. A closed PR without its intended verified correction did not satisfy that historical acceptance criterion. This paragraph grants no authority over present or unrelated PRs.
 
-Fix any newly reproduced defect encountered during review in the same session, add regression coverage and run the affected and full required checks. Do not leave a known code failure for the next audit. Conversely, do not reopen a previously resolved item without a failing current-head reproduction. Optional improvements require an explicit accept/reject/defer decision and must not be mislabeled as confirmed defects.
+The original engagement required same-session repair/regression coverage for newly reproduced defects and current-head reproduction before reopening resolved items. Optional improvements received separate accept/reject/defer decisions rather than being labeled confirmed defects. This recorded acceptance criterion is not an instruction to expand a later task.
 
-After all Rules/hooks, final-head checks and review pass, commit and push remaining approved work, merge any necessary feature branch, and verify integrated main and the actual installed/package artifact separately. Preserve previous releases and private state. Resolve all PRs and tasks under the Rules and issue one evidence-backed completion receipt. A genuine external prerequisite must be named accurately, not hidden by a fabricated success.
+Historical closure required approved commit/push/integration only after Rules/hooks, final-head checks and review, followed by separate main and installed/package verification. Previous releases and private state were preservation requirements. The original completion receipt accounted for its then-open PRs/tasks and genuine external prerequisites; it did not authorize present Git or installed-state changes.
 
 ## CI, Dependabot and optional improvements
 
 Daily Dependabot already covers Cargo and GitHub Actions. This correction introduces no new dependency, so do not add a duplicate updater or force an unrelated SDK migration. The existing matrix and native runner are extended rather than replaced by a redundant test pipeline.
 
-Evaluate moving the native fixture's pinned Python dependencies into a hashed requirements file with a corresponding pip Dependabot entry. The version currently embedded in a workflow is not a normal pip manifest. This is a supply-chain maintenance improvement, not a reproduced runtime defect in this audit.
+The original optional proposal was a hashed Python requirements file with a pip Dependabot entry, replacing a workflow-embedded version. A maintained pinned requirements manifest and pip updater were later added; complete transitive hash locking remains unclaimed. This was maintenance, not a reproduced runtime defect.
 
-Evaluate safe lock-wait duration/timeout diagnostic categories without credential paths or token values. Avoid poll-by-poll logging. Evaluate upstream-compatible single-flight refresh only with separate contracts for near-expiry refresh and explicit 401-driven refresh; skipping every guarded refresh can mask token rejection. Neither optional redesign is required to close RC01/RC02.
+Optional lock-wait duration/timeout categories excluded credential paths, token values and poll-by-poll noise. The single-flight proposal depended on separate near-expiry and explicit401 refresh contracts because skipping guarded refresh can mask token rejection. Neither redesign was required for RC01/RC02 and neither was adopted by this audit.
 
 ## Primary references
 

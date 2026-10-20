@@ -41,7 +41,11 @@ fn bounded_bytes(reader: impl Read) -> Result<Vec<u8>> {
 fn source_bytes(input: &str) -> Result<Vec<u8>> {
     // Reject ordinary FIFOs/devices before open, which can otherwise block indefinitely.
     validate_source(&fs::metadata(input).map_err(|_| read_error())?)?;
-    let file = fs::File::open(input).map_err(|_| read_error())?;
+    opened_bytes(Path::new(input))
+}
+
+fn opened_bytes(input: &Path) -> Result<Vec<u8>> {
+    let file = crate::storage::open_regular(input, false).map_err(|_| read_error())?;
     // Recheck the opened file, not just the earlier pathname metadata.
     validate_source(&file.metadata().map_err(|_| read_error())?)?;
     bounded_bytes(file)
@@ -164,6 +168,26 @@ pub fn import_file(config: &Path, input: &str) -> Result<(usize, usize)> {
 mod bounded_read_tests {
     use super::*;
     use std::io::{self, Cursor};
+
+    #[cfg(unix)]
+    #[test]
+    fn opened_import_rejects_fifo_after_a_successful_regular_preflight() {
+        fs::create_dir_all(".ci-work").unwrap();
+        let root = tempfile::tempdir_in(".ci-work").unwrap();
+        let path = root.path().join("substituted-input");
+        fs::write(&path, b"socks5://fixture.invalid:1080\n").unwrap();
+        validate_source(&fs::metadata(&path).unwrap()).unwrap();
+        fs::remove_file(&path).unwrap();
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&path)
+                .status()
+                .unwrap()
+                .success()
+        );
+        // Reach the actual post-preflight importer, not the earlier special-file rejection.
+        assert!(opened_bytes(&path).is_err());
+    }
 
     #[test]
     fn overflowing_reader_consumes_only_the_limit_plus_one_byte() {

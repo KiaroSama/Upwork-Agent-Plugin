@@ -46,6 +46,32 @@ fn dry_run_stale_owned_only_and_locked_files_survive() {
 }
 
 #[test]
+fn cleanup_discloses_truncated_directory_coverage() {
+    let dir = root();
+    for index in 0..1000 {
+        fs::write(
+            dir.path().join(format!(".cache/tmp/unknown-{index}")),
+            b"keep",
+        )
+        .unwrap();
+    }
+    assert!(
+        !cleanup::sweep(dir.path(), false, SystemTime::now())
+            .unwrap()
+            .inspection_truncated
+    );
+    fs::write(dir.path().join(".cache/tmp/extra"), b"keep").unwrap();
+    let report = cleanup::sweep(dir.path(), false, SystemTime::now()).unwrap();
+    assert!(report.inspection_truncated);
+    assert_eq!(report.skipped, 1000);
+    assert_eq!(report.removed, 0);
+    assert_eq!(
+        fs::read_dir(dir.path().join(".cache/tmp")).unwrap().count(),
+        1001
+    );
+}
+
+#[test]
 fn maintenance_exclusive_refuses_active_runtime() {
     let dir = root();
     let _runtime = cleanup::lease(dir.path(), false).unwrap();

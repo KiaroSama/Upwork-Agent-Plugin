@@ -170,6 +170,28 @@ fn init() -> Value {
 }
 
 #[tokio::test]
+async fn normal_and_manual_json_initialization_reject_raw_mixed_forms() {
+    for strict in [false, true] {
+        for extra in [
+            json!({"error":{"code":-1,"message":"private-fixture-marker"}}),
+            json!({"method":"ping"}),
+        ] {
+            let mut value = json!({"jsonrpc":"2.0","id":31,"result":{}});
+            value
+                .as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            let mut reply = Reply::json("application/json");
+            reply.bytes = serde_json::to_vec(&value).unwrap();
+            let f = Fixture::new(reply).await;
+            let error = f.post(init(), 4096, strict).await.unwrap_err();
+            assert!(!error.to_string().contains("private-fixture-marker"));
+            assert_eq!(f.count.load(Ordering::SeqCst), 1);
+        }
+    }
+}
+
+#[tokio::test]
 async fn baseline_mixed_case_media_types_work_on_every_post_path() {
     for (request, strict) in [(init(), true), (init(), false), (ping(), false)] {
         let f = Fixture::new(Reply::json("Application/JSON; charset=utf-8")).await;

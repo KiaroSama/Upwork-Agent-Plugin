@@ -119,8 +119,15 @@ impl StreamableHttpClient for McpRoute {
             });
             let exchange = async {
                 let response = if self.verify_initialization && is_initialize {
-                    initialization::post(&self.client, uri, message, session, auth, (headers, max))
-                        .await?
+                    initialization::post(
+                        &self.client,
+                        uri,
+                        message,
+                        session,
+                        auth,
+                        (headers, max, self.log.clone()),
+                    )
+                    .await?
                 } else {
                     responses::post(
                         &self.client,
@@ -128,7 +135,7 @@ impl StreamableHttpClient for McpRoute {
                         message,
                         session,
                         auth,
-                        (headers, max),
+                        (headers, max, self.log.clone()),
                         false,
                     )
                     .await?
@@ -184,7 +191,7 @@ impl StreamableHttpClient for McpRoute {
                 session,
                 last,
                 auth,
-                (headers, 16 * 1024 * 1024),
+                (headers, 16 * 1024 * 1024, self.log.clone()),
             ),
         )
         .await
@@ -200,7 +207,14 @@ impl StreamableHttpClient for McpRoute {
     ) -> Result<BoxedSseResponse, StreamableHttpError<Self::Error>> {
         self.guarded(
             "get",
-            responses::get(&self.client, uri, session, last, auth, (headers, max)),
+            responses::get(
+                &self.client,
+                uri,
+                session,
+                last,
+                auth,
+                (headers, max, self.log.clone()),
+            ),
         )
         .await
     }

@@ -1,4 +1,5 @@
 mod bounded;
+pub(crate) use bounded::open_regular;
 pub use bounded::{MAX_STATE_BYTES, json_bytes, optional_bytes};
 
 use crate::error::{Error, Result};

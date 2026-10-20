@@ -38,12 +38,16 @@ Open [Releases](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest
 for your machine and its matching `.sha256` file, not GitHub's source-code ZIP. No Rust, Cargo, Node,
 Git or local compilation is needed.
 
+Source version **2.1.11** is prepared in this checkout; its download names below are release targets,
+not evidence that it has been published. Until it appears in Releases, use the actual assets of the
+latest published release rather than renaming an older executable.
+
 | Machine | Download |
 | --- | --- |
-| Windows x64 | [upwork-agent-plugin-2.1.10-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.10-windows-x64.zip) |
-| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.10-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.10-linux-x64.tar.gz) |
-| macOS Apple Silicon | [upwork-agent-plugin-2.1.10-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.10-macos-arm64.tar.gz) |
-| macOS Intel | [upwork-agent-plugin-2.1.10-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.10-macos-x64.tar.gz) |
+| Windows x64 | [upwork-agent-plugin-2.1.11-windows-x64.zip](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.11-windows-x64.zip) |
+| Linux x64, glibc 2.35+ | [upwork-agent-plugin-2.1.11-linux-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.11-linux-x64.tar.gz) |
+| macOS Apple Silicon | [upwork-agent-plugin-2.1.11-macos-arm64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.11-macos-arm64.tar.gz) |
+| macOS Intel | [upwork-agent-plugin-2.1.11-macos-x64.tar.gz](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-agent-plugin-2.1.11-macos-x64.tar.gz) |
 
 Each archive contains the executable in `bin/`, its launchers, skills plugin and GPL license.
 `release.json` records the version, platform and source commit; corresponding source is available at
@@ -53,19 +57,19 @@ Do not move only the executable or overwrite existing profiles, saved sessions, 
 Verify SHA256 before running. On Windows, from your downloads folder:
 
 ```bash
-powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.10-windows-x64.zip -Algorithm SHA256"
+powershell.exe -NoProfile -Command "Get-FileHash ./upwork-agent-plugin-2.1.11-windows-x64.zip -Algorithm SHA256"
 ```
 
 Compare the displayed hash with the matching `.sha256` file. On Linux:
 
 ```bash
-sha256sum -c upwork-agent-plugin-2.1.10-linux-x64.tar.gz.sha256
+sha256sum -c upwork-agent-plugin-2.1.11-linux-x64.tar.gz.sha256
 ```
 
 On macOS Apple Silicon (use the x64 filename on Intel):
 
 ```bash
-shasum -a 256 -c upwork-agent-plugin-2.1.10-macos-arm64.tar.gz.sha256
+shasum -a 256 -c upwork-agent-plugin-2.1.11-macos-arm64.tar.gz.sha256
 ```
 
 Alternatively, download the platform artifact from a successful exact-commit
@@ -120,7 +124,7 @@ mkdir -m 700 upwork-agent-plugin
 ```
 
 ```bash
-tar -xzf upwork-agent-plugin-2.1.10-linux-x64.tar.gz -C upwork-agent-plugin
+tar -xzf upwork-agent-plugin-2.1.11-linux-x64.tar.gz -C upwork-agent-plugin
 ```
 
 Unix archives preserve executable permissions. The optional launcher needs `sh`, not PowerShell:
@@ -226,6 +230,11 @@ metadata is not recursively rewritten. Windows and the sign-in browser timezone 
 This does not hide location inferred from IP, explicit geographic hints or user-provided text;
 UTC log/expiry timestamps alone are not timezone masking.
 
+<a id="route-transition-revisions-and-build-deadlines"></a>
+### Route transition revisions
+
+Current connector writers atomically store an internal `_route_revision` only when the canonical effective route changes. A completed route cycle revokes old connections even between watcher observations; inactive-profile, label, ordering and equivalent-URL edits do not disconnect them. Legacy files remain readable without read-time rewriting. This marker does not authenticate external edits or detect every unobserved historical-document replay. Reconnect after an effective route change. Build deadlines are documented under [source builds](#optional-source-build-developers-only).
+
 ## Local proxy settings
 
 **8 — Local proxy settings** edits the endpoint; default is `socks5h://127.0.0.1:1595`.
@@ -299,6 +308,10 @@ no extra management MCP tools are introduced. Unsupported extra arguments fail b
 configuration changes; put `--root PATH` before the command. An unsupported `direct --help` never enables
 Direct mode. Reconnect after route changes; never put credentials in arguments.
 
+### Bulk import scaling
+
+Colliding display labels retain the same first-free identifiers, including holes and nested names. A transaction-local cursor avoids repeatedly scanning occupied prefixes; duplicate URLs consume no names. The 1 MiB input limit, active route, labels and atomic publication contract are unchanged. Deterministic probe-count and differential tests gate this optimization; recorded runner timings are diagnostic, not portable speed guarantees.
+
 ## Manual OAuth
 
 ```bash
@@ -363,7 +376,7 @@ varies; this is not a universal `codex plugin install` command. Standalone copyi
 
 ### Install the Cursor skill
 
-Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.10.zip).
+Download the [skills-only ZIP](https://github.com/KiaroSama/Upwork-Agent-Plugin/releases/latest/download/upwork-selection-plugin-2.1.11.zip).
 Copy `skills/upwork-project-selection/` to the workspace's `.agents/skills/upwork-project-selection/`.
 Preserve existing files, keep only one discovery copy, reopen the workspace and invoke `/upwork-project-selection`.
 
@@ -376,9 +389,9 @@ and invoke `/upwork-project-selection`. No native Antigravity plugin-install com
 ### Installation boundaries
 
 See [complete client instructions](docs/skills.md) for collision-safe Windows/Unix copying, manifest details
-and verification limits. Actual Claude validator and isolated marketplace installation were exercised;
+and verification limits. Historical Claude validation/install reports lack a complete public product/version/OS/source receipt;
 Codex/Cursor/Antigravity checks are structural/current-documentation evidence, not native runtime proof.
-Three synthetic evaluation prompts are not proof of live marketplace success or statistical effectiveness.
+Nine authored evaluation prompts (four selection, five profile) are not executed model evaluations or proof of live marketplace success or statistical effectiveness.
 Official Upwork skills remain separate; no global installation, permission expansion or duplicate route is enabled automatically.
 
 ## Profile management
@@ -389,6 +402,9 @@ for title, biography, skills, employment, education, language and availability c
 It reads current profile evidence, preserves untouched fields, presents the complete proposed diff and
 requires explicit approval before creating a write preview, then a second approval before confirmation.
 Installation alone never drafts or edits your profile. Unknown experience or metrics are never invented.
+For an explicitly offline draft, paste the facts: no MCP call is needed, supplied information is labeled
+potentially stale, and no current-account diff is invented. Later publication starts with fresh live
+account/profile reads and still requires both approvals. See [evidence boundaries](docs/verification-evidence.md).
 The hosted Upwork MCP already supplies these operations; the connector does not fabricate new APIs.
 
 Project selection now includes [competition and client-history evidence](skills/upwork-project-selection/references/competition.md):
@@ -490,6 +506,14 @@ sh ./build.sh
 ```
 
 Source builds can consume several GB under `target/`; user installation never needs that cache.
+The shell build requires monitor-mode process groups (it reuses installed Bash when `sh` lacks them),
+Git and SHA256 tooling; it installs nothing. Both entry points use 900-second wall/600-second idle
+release bounds and preserve the installed binary when compilation fails. Shell builds capture Cargo
+output in `logs/upwork-build_<UTC>_<pid>.log`; inspect that file for progress/errors. Optional
+`UPWORK_BUILD_WALL_SECONDS`/`UPWORK_BUILD_IDLE_SECONDS` may shorten, never increase, shell limits.
+Clean Git inputs and matching executable receipts are required for verified release packaging.
+Ordinary verification retains 900/180 seconds. Optimization, stripping and failure exit handling remain
+enabled; silence alone is not proof of compiler progress.
 Build/verification scripts keep generated paths inside the project. Preserve `bin/`, profiles, session,
 input files and operational logs when clearing optional development artifacts; shared tools remain untouched.
 
@@ -521,14 +545,22 @@ returning partial JSON, replaying the request or changing routes. Route cancella
 body reads. This is connector policy, not a provider limit, total-process memory cap, universal response
 deadline or guarantee of cancelling work already running remotely.
 
+See [verification evidence and safety boundaries](docs/verification-evidence.md) for SDK explicit-rejection
+recovery, package provenance, skill trace limitations and retained atomic-temporary recovery policy.
+
 ## Tests and CI
 
+For an authorized local light check or a verified CI fallback, the no-argument wrapper runs serial
+`cargo test --locked --all-targets -- --test-threads=1`. Its outer limits are 15 minutes wall / 3 minutes
+idle; it does not add Nextest case isolation or JUnit output. Do not duplicate the final CI suite locally.
+For exact CI runner parity, install the documented cargo-nextest prerequisite separately and use PowerShell:
+
 ```bash
-pwsh -NoProfile -File ./scripts/verify.ps1
+pwsh -NoProfile -Command "& ./scripts/verify.ps1 -CargoArgs @('nextest', 'run', '--locked', '--all-targets', '--profile', 'ci', '--no-fail-fast')"
 ```
 
-The bounded owner limits Cargo to 15 minutes wall / 3 minutes idle and terminates its process tree on expiry.
-Nextest uses two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout,
+The bounded owner terminates its process tree on expiry.
+Only the Nextest CI profile uses two workers, 15-second case timeout, 2-second termination grace and 120-second suite timeout,
 without retries. CI covers Windows x64, Linux x64, macOS ARM64 and macOS Intel: formatting, Clippy,
 UTF-8/source inventory, all suites, native build/launcher smoke, RustSec audit and CodeQL.
 
@@ -536,14 +568,14 @@ Packaging uses an explicit allowlist, verifies extracted binaries from a fresh s
 and unrelated CWD without a launcher, and checks generated host configuration, blocked startup, version,
 settings and SHA256. Only green exact-commit assets are released; private profiles, credentials, logs,
 caches and test keys are excluded. Artifacts expire after 14 days; Releases are durable.
-Dependabot checks Cargo/actions. CI starts only by manual dispatch; that final batch includes CodeQL
+Dependabot checks Cargo/actions and the isolated native-fixture Python manifest. CI starts only by manual dispatch; that final batch includes CodeQL
 and explicit base/head dependency review. The CodeQL workflow also supports a manual analysis-only
 run to establish or repair the default-branch baseline without rebuilding release assets or rerunning
 the native test matrix. Its analysis category is stable across standalone and reusable invocations.
 Linux CI also runs the
 retained native CLI and initialization probes against its checksum-verified packaged executable:
 272 CLI assertions, 30 sign-in contracts, 20 raw/framing cases, three credential coordination cases,
-eight ordering cases for each entry point, 20 gated initialization-ping cases, 21 bounded-state cases including four valid controls, an 8,192-profile import/reimport scaling case, two route-revision cases and 28 HTTP media/body cases across eleven native suites.
+eight ordering cases for each entry point, 20 gated initialization-ping cases, 21 bounded-state cases including four valid controls, an 8,192-profile import/reimport scaling case, two route-revision cases and 28 HTTP media/body cases across eleven native suites, plus causal-oracle controls and five ordinary POST/listening-GET cases.
 The Python fixtures under `tests/native/` use isolated loopback TLS and child-only trust, never real
 account state. Each probe has a 180-second controller deadline; synthetic keys and binaries are
 removed, while sanitized JSON receipts and UTC diagnostic logs are retained as verification artifacts.
@@ -576,13 +608,3 @@ If this project helps you, donations are appreciated.
 | Litecoin (LTC) | LTC | `ltc1qntqnnrunadurnw4cshv3qgspywrueyyeyngwuy` |
 | Solana (SOL) | Solana | `7B2wkczUjmkDhETwQuknBL8sUsbuV7nErxc317TmQuwR` |
 | Polygon (POL) | Polygon | `0x0Bd0BA443a8B9cf15922bf7f0Bb0a4b495fD06Ef` |
-
-### Bulk import scaling
-
-Colliding display labels retain the same first-free identifiers, including holes and nested names. A transaction-local cursor avoids repeatedly scanning occupied prefixes; duplicate URLs consume no names. The 1 MiB input limit, active route, labels and atomic publication contract are unchanged. Deterministic probe-count and differential tests gate this optimization; recorded runner timings are diagnostic, not portable speed guarantees.
-
-### Route transition revisions and build deadlines
-
-Current connector writers atomically store an internal `_route_revision` only when the canonical effective route changes. A completed route cycle revokes old connections even between watcher observations; inactive-profile, label, ordering and equivalent-URL edits do not disconnect them. Legacy files remain readable without read-time rewriting. This marker does not authenticate external edits or detect every unobserved historical-document replay. Reconnect after an effective route change.
-
-Optimized release compilation keeps a900-second wall deadline and a600-second output-idle deadline. Ordinary verification retains900/180 seconds. Optimization, stripping and failure exit handling remain enabled; silence alone is not proof of compiler progress.

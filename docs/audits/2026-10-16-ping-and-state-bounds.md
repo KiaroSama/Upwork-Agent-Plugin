@@ -1,4 +1,4 @@
-Before doing any work, read and fully obey the owner's applicable private Rules, repository instructions and hooks. Follow the complete ordered Spec Kit chain defined by those Rules, including research, specification, planning, tasks, implementation, verification and integration records. Do not invent substitute Rules or claim unpublished hooks were executed.
+> Historical engagement record, not current instructions or authorization. Directives below describe original requirements only; they grant no execution, publication, merge or history-rewrite permission. Historical H01 was rejected: legitimate bot attribution is retained, as recorded in the later [import-scaling report](2026-10-16-import-scaling.md). See [current dispositions](README.md).
 
 # Upwork Agent Plugin — N01/N02 implemented repair and H01 integration handoff
 
@@ -10,7 +10,7 @@ Implementation branch: `fix/initialization-ping-state-bounds-2026-10-16`. Implem
 
 ## Scope and authority
 
-Continue the three identified items N01, N02 and H01. PR #12 was merged before this pass; retain its refresh lock, manual callback transaction and reverse writer-order tests. Earlier CLI/import, registration rollback, raw initialization envelope and first-terminal SSE fixes are not reopened. Do not recategorize intentionally manual application CI as a bug.
+This historical pass investigated N01, N02 and H01. PR #12 was already merged; its refresh lock, manual callback transaction and reverse writer-order tests were preservation constraints. Earlier CLI/import, registration rollback, raw initialization envelope and first-terminal SSE fixes stayed outside the reopened scope. Intentional manual application CI was not classified as a defect. H01 was later rejected; see the disposition index.
 
 The assistant is authorized to open/update repair PRs, not merge/close any PR or issue or rewrite main. The owner's reviewing agent handles integration and all PR dispositions under the actual Rules. Preserve private credentials, client registrations, proxy settings, installed executables and unrelated local work. No live Upwork login, proposal, message, purchase, Connects spending or host trust-store modification is authorized by these synthetic tests.
 
@@ -72,25 +72,25 @@ These measures do not promise to interrupt a stuck kernel, a stalled network fil
 
 ## H01 — integrated Dependabot commit has nonconforming raw identities
 
-This is a verified publication-policy mismatch, not an application defect. Commit `95a95f1e4e7ba52fd6ff53f306331ea7a323532f` entered reviewed main through PR #13 ancestry. Its raw author is `49699333+dependabot[bot]@users.noreply.github.com`; its raw committer is `noreply@github.com`. The main tip itself uses the requested email. The bot commit has an original verified signature.
+The original audit classified this as a publication-policy mismatch, not an application defect; that classification was subsequently rejected because authentic bot attribution was permitted. Commit `95a95f1e4e7ba52fd6ff53f306331ea7a323532f` entered reviewed main through PR #13 ancestry. Its raw author is `49699333+dependabot[bot]@users.noreply.github.com`; its raw committer is `noreply@github.com`. The main tip used the requested owner email. The bot commit retained its original verified signature.
 
-ALL prior and future published author and committer emails must be `Kiaro.Sama.Dev@gmail.com`, according to the owner's Rules. New proposed commits are generated with both raw fields set to that address. This does not retroactively repair H01: a normal descendant PR, mailmap or coauthor trailer cannot alter an ancestor's raw identities. Do not claim otherwise.
+The original audit incorrectly extended the owner's `Kiaro.Sama.Dev@gmail.com` requirement to legitimate bot identities. New owner-attributed proposed commits used both required raw fields. A descendant PR, mailmap or trailer could not change the ancestor, but no ancestor correction was required for this permitted bot attribution.
 
-The authorized reviewing agent must immediately handle history repair under the actual Rules: record current branch/tag SHAs; create and verify a private recovery bundle; retain the original signed commit and provenance; construct an old-to-new mapping; change the required identity fields without changing content trees; coordinate affected refs/tags and releases; and publish only with explicit expected-ref leases. Rewriting changes commit IDs and invalidates original commit signatures. Never call a rewritten bot commit still signed by GitHub, remove provenance silently, or blindly force-push.
+The original proposal described private recovery bundles, old-to-new mappings, tree/provenance preservation and explicit expected-ref leases for a possible rewrite. That proposal was rejected for H01. Rewriting would change commit IDs and invalidate original signatures; the signed bot commit was instead preserved. No history-repair command is authorized by this record.
 
-The auditing assistant does NOT rewrite main. H01 remains an integration action for the authorized reviewer. Recheck raw `%ae` and `%ce` on the final integrated ancestry and every later publication; protect future bot integration according to the Rules rather than knowingly reintroducing the same mismatch. Signed tags and release/source receipts must be revalidated after history repair.
+The auditor did not rewrite main. H01 is a rejected historical finding, not an open integration action. Owner-attributed identities and legitimate bot identities remain distinct. See the disposition index and later import-scaling report for that resolution.
 
 ## One-pass reviewing-agent execution contract
 
-Read the actual Rules/hooks first, then execute their complete Spec Kit sequence. Research current official primary documentation and relevant GitHub implementations, particularly MCP initialization/control messages, pinned SDK transport behavior and safe regular-file access. Save research, decisions, specification, tasks and test receipts where the Rules require. Unpublished Rules and hooks were not executed by this audit.
+The original review required applicable Rules/hooks and their Spec Kit sequence, primary-source research on MCP initialization/control messages, pinned SDK transport behavior and safe regular-file access. Unpublished Rules/hooks were not executed by this audit.
 
-Re-read current main, the implementation branch, all open PRs and local dirty state. Reuse the existing N01/N02 PR. Do not create a competing patch, reopen merged RC01/RC02 without a failing reproduction, or apply an old patch to a different head blindly. If current code has moved, reconcile the exact diff while preserving others' work.
+Its inventory covered main, the existing N01/N02 branch, then-open PRs and local modifications. Existing-branch reuse, preservation of others' work and current-head reproduction before reopening RC01/RC02 were historical acceptance criteria. No later session is directed to apply an old patch or perform Git operations by this record.
 
-Review the implemented code, not only this document. Match each finding to a failing baseline oracle, its correction and successful regression/packaged-binary receipt. If you discover a real additional bug during review, fix it and add a regression in the SAME session rather than deferring a known failure to another audit. Conversely, reject unsupported hypotheses instead of expanding the work indefinitely.
+The original review required source evidence linking each finding to a failing baseline, correction and successful regression/package receipt. Newly reproduced defects needed regression coverage; unsupported hypotheses did not justify indefinite scope expansion.
 
-Prefer PowerShell 7 on Windows. Locate the actual checkout under `G:\Program Files\Portable\Scripts`; do not invent or move the installation folder. Use the repository's project-contained cache/temp configuration and wrappers. New scripts require English comments and timestamped INFO, WARNING, ERROR and DEBUG-capable logging. Never log passwords, tokens, authorization links/states, private headers or full environment dumps.
+Its Windows procedure used PowerShell7, the existing checkout and contained cache/temp wrappers. Additional scripts required English comments and timestamped safe diagnostic levels; passwords, tokens, authorization links/states, private headers and environment dumps were excluded.
 
-Required checks through the existing environment include:
+The historical check examples through the then-current environment were:
 
 ```powershell
 pwsh -NoProfile -File ./scripts/check.ps1
@@ -99,13 +99,13 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo nextest run --locked --all-targets --profile ci --no-fail-fast
 ```
 
-Inspect every native exit status. Require the final manual application CI batch on the exact reviewed head with explicit `base_ref`, all four platform tests/builds/launchers/cleanup/packages, Linux packaged acceptance, RustSec, CodeQL and Dependency Review. Preserve previous failed attempts. Do not skip tests, add assertion retries until green, weaken security gates, or borrow an earlier-head pass. A staging test is distinct from final application CI; an artifact existing is not proof of success.
+That engagement's acceptance required native exit-status checks and one final manual exact-head batch with explicit `base_ref`, all four platform tests/builds/launchers/cleanup/packages, Linux packaged acceptance, RustSec, CodeQL and Dependency Review. Failed attempts remained evidence; skipped tests, assertion retries, weakened gates or earlier-head passes were not substitutes. Staging tests and artifact existence did not establish final success.
 
-Once code is ready, complete one final batch rather than many speculative full batches. An isolated preparation run may compile before/after to establish evidence; it is not a replacement for final cross-platform certification. Preserve the intentional manual dispatch policy in the production workflow.
+Isolated before/after preparation was separate from final cross-platform verification. The original workflow retained manual dispatch and one completed-code batch. These archived examples authorize no present local compilation or CI dispatch.
 
-Review and resolve ALL PRs according to the owner's Rules. Merge an eligible independently reviewed and verified PR. If direct merging is unsuitable, correct the code/conflicts, integrate a verified equivalent with traceable provenance, and then close superseded work according to the Rules. Closing without integrating the intended verified correction is not DONE. Do not exempt all unrelated PRs from the owner's explicit all-PR disposition rule.
+The original engagement required review and disposition of its then-open PRs under the owner's Rules. Integration required independent review and verification; supersession required a traceable verified equivalent. A closed PR alone was not completion evidence. This records historical acceptance criteria and does not authorize present or unrelated PR actions.
 
-After Rules/hooks, H01 identity handling and final checks pass, commit/push approved changes, integrate any necessary feature branch, and verify both integrated main and the actual installed/package executable. The assistant leaves merge/close authority with the owner/reviewing agent. Keep one ledger with N01, N02 and H01, exact evidence and final dispositions. Name genuine external blockers accurately instead of claiming an impossible guarantee.
+The original proposed closure combined Rules/hooks, H01 disposition and final checks before approved Git integration, then separate main and installed/package verification. Its auditor left merge/close authority to the owner/reviewer. N01, N02 and H01 were tracked with exact evidence and dispositions. H01's proposed bot-identity rewrite was subsequently rejected, as recorded in the current disposition index; no historical text here authorizes that rewrite or present publication.
 
 ## CI, dependency maintenance and optional improvements
 

@@ -12,6 +12,16 @@ use upwork_connector::{
 
 #[tokio::test]
 async fn failed_http_post_logs_only_fixed_classes_and_preserves_the_typed_error() {
+    for status in [
+        StatusCode::UNAUTHORIZED,
+        StatusCode::FORBIDDEN,
+        StatusCode::BAD_GATEWAY,
+    ] {
+        failed_status_is_safely_logged(status).await;
+    }
+}
+
+async fn failed_status_is_safely_logged(status: StatusCode) {
     fs::create_dir_all(".ci-work").unwrap();
     let dir = tempfile::tempdir_in(".ci-work").unwrap();
     let path = dir.path().join("config/connections.json");
@@ -28,7 +38,7 @@ async fn failed_http_post_logs_only_fixed_classes_and_preserves_the_typed_error(
     let endpoint = format!("http://{}/mcp", listener.local_addr().unwrap());
     let app = Router::new().route(
         "/mcp",
-        post(|| async { (StatusCode::BAD_GATEWAY, "fixture-private-response-token") }),
+        post(move || async move { (status, "fixture-private-response-token") }),
     );
     let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
     let message: ClientJsonRpcMessage =
@@ -56,9 +66,152 @@ async fn failed_http_post_logs_only_fixed_classes_and_preserves_the_typed_error(
         .path();
     let text = fs::read_to_string(path).unwrap();
     assert!(text.contains("stage=post class=unexpected_http_response"));
+    assert!(text.contains(&format!(
+        "stage=post phase=headers status={}",
+        status.as_u16()
+    )));
     assert!(!text.contains("fixture-private-response-token"));
     assert!(!text.contains("fixture-session"));
     assert!(!text.contains("http://"));
+}
+
+#[tokio::test]
+async fn late_get_body_failure_retains_safe_phase_and_does_not_replay() {
+    use futures::StreamExt;
+    use tokio::io::AsyncWriteExt;
+    fs::create_dir_all(".ci-work").unwrap();
+    let root = tempfile::tempdir_in(".ci-work").unwrap();
+    let path = root.path().join("config/connections.json");
+    config::update(&path, |v| {
+        v.mode = Mode::Direct;
+        Ok(())
+    })
+    .unwrap();
+    let client = McpRoute::new(Route::new(path).unwrap())
+        .unwrap()
+        .with_log(Log::new(root.path(), "late-stream"));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let uri = format!("http://{}/private-fixture", listener.local_addr().unwrap());
+    let peer = tokio::spawn(async move {
+        let (mut socket, _) = listener.accept().await.unwrap();
+        let mut request = Vec::new();
+        while !request.ends_with(b"\r\n\r\n") {
+            request.push(socket.read_u8().await.unwrap());
+            assert!(request.len() < 8192);
+        }
+        socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: 1000\r\nConnection: close\r\n\r\ndata: {").await.unwrap();
+    });
+    let outcome = tokio::time::timeout(Duration::from_secs(2), async {
+        let mut stream = client
+            .get_stream(uri.into(), None, None, None, HashMap::new())
+            .await
+            .unwrap();
+        assert!(stream.next().await.unwrap().is_err());
+    })
+    .await;
+    peer.abort();
+    let _ = peer.await;
+    outcome.unwrap();
+    let log = fs::read_dir(root.path().join("logs"))
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let text = fs::read_to_string(log).unwrap();
+    assert_eq!(
+        text.matches("MCP stream failure stage=get phase=body class=")
+            .count(),
+        1
+    );
+    assert!(!text.contains("private-fixture"));
+    assert!(!text.contains("http://"));
+}
+
+#[tokio::test]
+async fn graceful_sse_completion_reuses_the_connection_without_failure_diagnostics() {
+    use axum::{
+        extract::ConnectInfo,
+        response::{Sse, sse::Event},
+        routing::get,
+    };
+    use futures::{FutureExt, StreamExt};
+    use std::{net::SocketAddr, panic::AssertUnwindSafe, sync::Mutex};
+    fs::create_dir_all(".ci-work").unwrap();
+    let root = tempfile::tempdir_in(".ci-work").unwrap();
+    let path = root.path().join("config/connections.json");
+    config::update(&path, |value| {
+        value.mode = Mode::Direct;
+        Ok(())
+    })
+    .unwrap();
+    let log = Log::new(root.path(), "graceful-stream");
+    log.event("INFO", "Graceful stream fixture started.");
+    let client = McpRoute::new(Route::new(path).unwrap())
+        .unwrap()
+        .with_log(log);
+    let peers = Arc::new(Mutex::new(Vec::new()));
+    let observed = peers.clone();
+    let app = Router::new().route("/mcp", get(move |ConnectInfo(peer): ConnectInfo<SocketAddr>| {
+        observed.lock().unwrap().push(peer);
+        async {
+            Sse::new(futures::stream::once(async {
+                Ok::<_, std::convert::Infallible>(Event::default().data(
+                    r#"{"jsonrpc":"2.0","method":"notifications/cancelled","params":{"requestId":7,"reason":"fixture"}}"#
+                ))
+            }))
+        }
+    }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let endpoint: Arc<str> = format!("http://{}/mcp", listener.local_addr().unwrap()).into();
+    let server = tokio::spawn(async move {
+        axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .await
+        .unwrap();
+    });
+    let outcome = tokio::time::timeout(
+        Duration::from_secs(3),
+        AssertUnwindSafe(async {
+            for _ in 0..2 {
+                let mut stream = client
+                    .get_stream(endpoint.clone(), None, None, None, HashMap::new())
+                    .await
+                    .unwrap();
+                let event = stream.next().await.unwrap().unwrap();
+                let value: serde_json::Value =
+                    serde_json::from_str(event.data.as_deref().unwrap()).unwrap();
+                assert_eq!(value["method"], "notifications/cancelled");
+                assert!(
+                    stream.next().await.is_none(),
+                    "A complete SSE body must end cleanly"
+                );
+            }
+            let peers = peers.lock().unwrap();
+            assert_eq!(peers.len(), 2, "Exactly two explicit GETs, no retry");
+            assert_eq!(
+                peers[0], peers[1],
+                "The healthy pooled connection was reused"
+            );
+            let log = fs::read_dir(root.path().join("logs"))
+                .unwrap()
+                .next()
+                .unwrap()
+                .unwrap()
+                .path();
+            let text = fs::read_to_string(log).unwrap();
+            assert!(text.contains("Graceful stream fixture started."));
+            assert!(!text.contains("MCP stream failure"));
+            assert!(!text.contains("MCP HTTP failure"));
+        })
+        .catch_unwind(),
+    )
+    .await;
+    server.abort();
+    let _ = server.await;
+    outcome.unwrap().unwrap();
 }
 
 #[test]

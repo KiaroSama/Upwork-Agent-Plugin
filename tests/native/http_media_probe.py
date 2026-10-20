@@ -11,7 +11,7 @@ import threading
 
 sys.dont_write_bytecode = True
 import protocol_probe as protocol
-from terminal_sse_probe import execute
+from terminal_sse_probe import execute, representation_rejected
 
 LOG = logging.getLogger('http-media')
 JSON_LIMIT = 16 * 1024 * 1024
@@ -90,7 +90,9 @@ def run_case(binary, ca, output, mode, case):
             result = execute(binary, root, ca, mode)
             accepted = result['completion_claimed'] if mode == 'sign-in' else result['first_terminal_message'] == 'result'
             expected = CASES[case][2]
-            passed = (accepted == expected and not result['controller_timeout'] and not result['private_marker_in_stderr'] and server.responses == 1)
+            causal_outcome = (accepted and result['returncode'] == 0) if expected else representation_rejected(result)
+            passed = (causal_outcome and not result['protocol_invalid'] and not result['controller_timeout']
+                      and not result['private_marker_in_stderr'] and server.responses == 1)
             if mode == 'sign-in':
                 passed &= result['callback_sent'] and (result['returncode'] == 0) == expected and server.initialized == int(expected)
             result.update(mode=mode, case=case, accepted=accepted, expected_success=expected,
@@ -114,6 +116,8 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     names = ['json', 'json_large', 'json_upper', 'json_prefix', 'sse_upper', 'sse_prefix', 'oversized'] if args.expect_baseline else list(CASES)
     results = []
+    binary = args.binary.resolve()
+    binary_digest = hashlib.sha256(binary.read_bytes()).hexdigest()
     LOG.debug('JSON has a distinct 16 MiB policy; the relay SSE limit remains 1 MiB.')
     with tempfile.TemporaryDirectory(prefix='http-media-certs-', dir=args.output.parent) as tmp:
         ca = Path(tmp)
@@ -123,7 +127,7 @@ def main():
             for case in names:
                 results.append(run_case(args.binary.resolve(), ca, args.output.parent, mode, case))
                 args.output.write_text(json.dumps({'cases': len(results), 'passed': sum(row['passed'] for row in results),
-                    'binary_sha256': hashlib.sha256(args.binary.read_bytes()).hexdigest(), 'results': results}, indent=2) + '\n', encoding='utf-8')
+                    'binary_sha256': binary_digest, 'results': results}, indent=2) + '\n', encoding='utf-8')
     if args.expect_baseline:
         passed = all(not row['controller_timeout'] and row['initialization_requests'] == 1 and
             row['accepted'] == (row['case'] in {'json', 'json_large', 'json_prefix', 'sse_prefix'} or

@@ -1,15 +1,15 @@
 {
   "name": "upwork-agent-plugin-marketplace",
-  "description": "Read-only Upwork job-selection skills with separate native connector setup.",
+  "description": "Upwork job selection and approval-gated profile workflows with separate native connector setup.",
   "owner": {
     "name": "KiaroSama"
   },
   "plugins": [
     {
       "name": "upwork-agent-connector",
-      "description": "Evidence-based, read-only Upwork project selection.",
+      "description": "Evidence-based job selection and profile drafting with explicit publication approvals.",
       "source": "./",
-      "version": "2.1.10"
+      "version": "2.1.11"
     }
   ]
 }

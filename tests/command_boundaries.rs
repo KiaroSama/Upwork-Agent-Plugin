@@ -116,6 +116,67 @@ fn valid_direct_and_block_commands_still_require_explicit_dispatch() {
 }
 
 #[test]
+fn ordinary_command_errors_reach_the_final_log_without_private_input() {
+    for (args, input) in [
+        (vec!["import", "missing-private-fixture"], ""),
+        (vec!["add"], "private-invalid-json"),
+        (vec!["local-settings", "set"], "private-invalid-json"),
+        (vec!["select", "missing-private-profile"], ""),
+        (vec!["status"], ""),
+    ] {
+        let dir = temp();
+        let state = dir.path().join("config/connections.json");
+        fs::create_dir_all(state.parent().unwrap()).unwrap();
+        let before: &[u8] = if args[0] == "status" {
+            b"private-invalid-state"
+        } else {
+            br#"{"version":1,"mode":"blocked","selected":null,"profiles":[]}"#
+        };
+        fs::write(&state, before).unwrap();
+        let output = run(dir.path(), &args, input);
+        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(fs::read(&state).unwrap(), before);
+        let logs = fs::read_dir(dir.path().join("logs")).unwrap();
+        let text = logs
+            .map(|entry| fs::read_to_string(entry.unwrap().path()).unwrap())
+            .collect::<String>();
+        assert_eq!(
+            text.matches("[ERROR] [upwork-native] Native executable stopped")
+                .count(),
+            1
+        );
+        assert!(!text.contains("private-invalid-json"));
+        assert!(!text.contains("missing-private-fixture"));
+        assert!(!text.contains("missing-private-profile"));
+        assert!(!text.contains("private-invalid-state"));
+    }
+}
+
+#[test]
+fn bridge_setup_failures_reach_both_final_lifecycle_logs_without_networking() {
+    for (mode, expected) in [("blocked", 1), ("direct", 3)] {
+        let dir = temp();
+        let state = dir.path().join("config/connections.json");
+        fs::create_dir_all(state.parent().unwrap()).unwrap();
+        let before = json!({"version":1,"mode":mode,"selected":null,"profiles":[]}).to_string();
+        fs::write(&state, &before).unwrap();
+        let output = run(dir.path(), &["bridge"], "");
+        assert_eq!(output.status.code(), Some(expected));
+        assert!(output.stdout.is_empty());
+        assert_eq!(fs::read_to_string(state).unwrap(), before);
+        let text = fs::read_dir(dir.path().join("logs"))
+            .unwrap()
+            .map(|entry| fs::read_to_string(entry.unwrap().path()).unwrap())
+            .collect::<String>();
+        for component in ["upwork-native", "upwork-bridge"] {
+            assert_eq!(text.matches(&format!("[ERROR] [{component}]")).count(), 1);
+        }
+        assert!(text.contains("Native connector stopped; no direct fallback."));
+        assert!(text.contains("Native executable stopped; private input suppressed."));
+    }
+}
+
+#[test]
 fn sanitized_proxy_urls_retain_ports_credentials_are_removed_and_ipv6_is_preserved() {
     for (scheme, port) in [
         ("http", 80),
