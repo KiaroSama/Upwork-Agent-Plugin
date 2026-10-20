@@ -20,6 +20,17 @@ use upwork_connector::{
 
 #[tokio::test]
 async fn relay_saturation_releases_cleanly_and_route_cancellation_remains_bounded() {
+    saturated("control").await;
+}
+
+#[tokio::test]
+async fn ordinary_overflow_fails_explicitly_and_downstream_eof_does_not_wait_for_capacity() {
+    saturated("overflow").await;
+    saturated("control-overflow").await;
+    saturated("eof").await;
+}
+
+async fn saturated(action: &str) {
     fs::create_dir_all(".ci-work").unwrap();
     let dir = tempfile::tempdir_in(".ci-work").unwrap();
     let path = dir.path().join("config/connections.json");
@@ -37,7 +48,10 @@ async fn relay_saturation_releases_cleanly_and_route_cancellation_remains_bounde
     let app = Router::new().route("/mcp", post(move |Json(v): Json<Value>| {
         let (gate, seen, reply) = (gate.clone(), seen.clone(), reply.clone());
         async move {
-            if v.get("method").is_none() { reply.notify_one(); return StatusCode::ACCEPTED.into_response(); }
+            if v.get("method").is_none() {
+                if v["id"] != "held-ping" { gate.acquire().await.unwrap().forget(); }
+                reply.notify_one(); return StatusCode::ACCEPTED.into_response();
+            }
             if v["method"] == "notifications/initialized" { return StatusCode::ACCEPTED.into_response(); }
             if v["method"] == "initialize" {
                 return Json(json!({"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-11-25","capabilities":{},"serverInfo":{"name":"fixture","version":"1"}}})).into_response();
@@ -74,18 +88,34 @@ async fn relay_saturation_releases_cleanly_and_route_cancellation_remains_bounde
             writer.write_all(format!("{{\"jsonrpc\":\"2.0\",\"id\":{id},\"method\":\"ping\"}}\n").as_bytes()).await.unwrap();
         }
         entered.acquire_many(2).await.unwrap().forget();
-        writer.write_all(b"{\"jsonrpc\":\"2.0\",\"id\":\"held-ping\",\"result\":{}}\n").await.unwrap();
-        // Characterize the current bounded failure window, then prove fixture health by release.
-        // This timeout is the observation itself, not a readiness delay or an asserted repair.
-        let control_before_release = tokio::time::timeout(Duration::from_millis(200), control.notified()).await.is_ok();
-        held.add_permits(16);
-        if !control_before_release {
-            tokio::time::timeout(Duration::from_secs(2), control.notified()).await
-                .expect("Control must progress after the ordinary gate is released");
+        if action == "overflow" || action == "control-overflow" {
+            if action == "overflow" {
+                writer.write_all(b"{\"jsonrpc\":\"2.0\",\"id\":99,\"method\":\"ping\"}\n").await.unwrap();
+            } else {
+                for id in 100..117 {
+                    writer.write_all(format!("{{\"jsonrpc\":\"2.0\",\"id\":{id},\"result\":{{}}}}\n").as_bytes()).await.unwrap();
+                }
+            }
+            let stopped = tokio::time::timeout(Duration::from_secs(2), &mut relay).await.unwrap();
+            joined = true;
+            assert!(matches!(stopped.unwrap(), Err(upwork_connector::error::Error::Safe(
+                "MCP relay admission limit exceeded; reconnect without replaying uncertain work."
+            ))));
+            return;
         }
+        if action == "eof" {
+            writer.shutdown().await.unwrap();
+            let stopped = tokio::time::timeout(Duration::from_secs(2), &mut relay).await.unwrap();
+            joined = true;
+            assert!(stopped.unwrap().is_ok());
+            return;
+        }
+        writer.write_all(b"{\"jsonrpc\":\"2.0\",\"id\":\"held-ping\",\"result\":{}}\n").await.unwrap();
+        tokio::time::timeout(Duration::from_secs(2), control.notified()).await
+            .expect("Control must progress before any ordinary POST is released");
         fs::write(".ci-work/relay-characterization.json",
-            serde_json::to_vec(&json!({"control_before_release":control_before_release,
-                "observation_ms":200,"ordinary_frames":16,"repair_proved":false})).unwrap()).unwrap();
+            serde_json::to_vec(&json!({"control_before_release":true,
+                "ordinary_frames":16,"ordinary_limit":16,"control_limit":16,"repair_proved":true})).unwrap()).unwrap();
         config::update(&path, |v| { v.mode = Mode::Blocked; Ok(()) }).unwrap();
         let stopped = tokio::time::timeout(Duration::from_secs(3), &mut relay).await.unwrap();
         joined = true;

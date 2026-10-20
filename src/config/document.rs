@@ -51,7 +51,11 @@ pub(crate) fn read_snapshot(path: &Path) -> Result<Snapshot> {
     let Some(bytes) = crate::storage::optional_bytes(path, false)? else {
         return Ok(Snapshot::default());
     };
-    let text = std::str::from_utf8(&bytes)
+    parse_snapshot(&bytes)
+}
+
+pub(crate) fn parse_snapshot(bytes: &[u8]) -> Result<Snapshot> {
+    let text = std::str::from_utf8(bytes)
         .map_err(|_| Error::Safe("Connection state must be valid UTF-8; networking blocked."))?;
     let snapshot: Snapshot = serde_json::from_str(text)?;
     snapshot.connections.validate()?;

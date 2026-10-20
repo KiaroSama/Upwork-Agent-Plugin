@@ -102,7 +102,22 @@ includes the isolated test process/runtime, not other Nextest processes; clock r
 zero for short samples. Snapshot counts are not kernel read calls or physical disk operations.
 Instrumentation is compiled only into unit tests, not the released executable. No timing ratio is a
 pass criterion, and these measurements do not attribute host-wide load or authorize an mtime cache.
-Route revocation and existing consistency guarantees remain unchanged.
+Every check still reads fresh bounded regular-file bytes. Exact equality to the last fully validated
+same-route document reuses its validity; any byte difference requires full UTF-8, schema, profile,
+selection and revision validation. This private bounded in-memory document is shared by Route clones,
+never logged or serialized; it is not an mtime cache and adds no freshness window. Parse counts are
+recorded separately from read attempts. Route revocation and existing consistency guarantees remain
+unchanged.
+
+## Relay admission
+
+The relay admits at most16 outstanding ordinary sends and16 control responses independently. Control
+responses can reach the SDK's separate control queue while ordinary POSTs are held; ordinary messages
+retain admission order and the SDK still permits only two ordinary HTTP requests at once. Input frames
+remain bounded to1MiB. A next frame exceeding its category's budget terminates explicitly, without
+silently dropping a message or replaying uncertain work. This replaces the previous16-total admission
+backpressure contract. Route change and downstream EOF remain cancellation paths; a host that stops
+reading stdout can still impose output backpressure.
 
 ## Bounded cleanup and verification receipts
 

@@ -217,6 +217,14 @@ Observed invalidation permanently revokes the old connection and its clones, eve
 Cancellation covers stalled protocol output and OAuth response bodies; SDK shutdown is separately bounded
 to two seconds. Interrupted work or partial protocol output is not replayed automatically. Reconnect the MCP host.
 An authorization-server mismatch fails closed without deleting the original session.
+Every check reads fresh bounded configuration bytes; only byte-identical already validated state can
+reuse its parse. Different bytes are fully validated, including inactive profiles and route revision.
+No timestamp-only cache or new freshness delay is introduced.
+
+Relay admission has separate16-ordinary and16-control-response budgets. Control replies can progress
+while ordinary sends are held; ordinary order and two concurrent ordinary HTTP slots are retained.
+A frame exceeding its category's budget fails explicitly instead of growing an unbounded queue.
+Frames remain limited to1MiB; unknown remote write outcomes are never automatically replayed.
 
 Proxy-side DNS prevents local destination lookups, but cannot guarantee a resolver in the proxy exit's
 country. Configure upstream DNS/DoH in your local proxy application. Browser DNS/routing/timezone,

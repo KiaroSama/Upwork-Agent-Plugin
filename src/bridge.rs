@@ -93,27 +93,14 @@ where
     let mut line = Vec::new();
     let mut sends = FuturesUnordered::new();
     let mut pings = std::collections::HashSet::new();
+    let mut ordinary = 0usize;
+    let mut controls = 0usize;
     let result = route.guard(async {
         loop {
             tokio::select! {
                 biased;
-                count=read_bounded(&mut input,&mut line), if sends.len()<16=>{
-                    if count?==0 {return Ok(());}
-                    let mut message:ClientJsonRpcMessage=serde_json::from_slice(&line)?;
-                    line.clear(); route.check()?;
-                    device_context::normalize(&mut message);
-                    let ping_reply = match &message {
-                        ClientJsonRpcMessage::Response(response) => pings.remove(&response.id),
-                        ClientJsonRpcMessage::Error(error) => {
-                            if let Some(id) = &error.id { pings.remove(id); }
-                            false
-                        }
-                        _ => false,
-                    };
-                    let send = send_owned(&mut remote,message);
-                    sends.push(async move { (ping_reply, send.await) });
-                }
-                Some((ping_reply,result))=sends.next(),if !sends.is_empty()=>{
+                Some((control,ping_reply,result))=sends.next(),if !sends.is_empty()=>{
+                    if control { controls -= 1; } else { ordinary -= 1; }
                     if let Err(error) = result {
                         // The SDK releases this control slot and keeps the worker usable.
                         // Do not replay the reply or turn a heartbeat deadline into process death.
@@ -139,6 +126,27 @@ where
                     }
                     let mut bytes=serde_json::to_vec(&message)?; bytes.push(b'\n');
                     output.write_all(&bytes).await?; output.flush().await?;
+                }
+                count=read_bounded(&mut input,&mut line)=>{
+                    if count?==0 {return Ok(());}
+                    let mut message:ClientJsonRpcMessage=serde_json::from_slice(&line)?;
+                    line.clear(); route.check()?;
+                    device_context::normalize(&mut message);
+                    let control = matches!(&message, ClientJsonRpcMessage::Response(_) | ClientJsonRpcMessage::Error(_));
+                    if (control && controls == 16) || (!control && ordinary == 16) {
+                        return Err(Error::Safe("MCP relay admission limit exceeded; reconnect without replaying uncertain work."));
+                    }
+                    let ping_reply = match &message {
+                        ClientJsonRpcMessage::Response(response) => pings.remove(&response.id),
+                        ClientJsonRpcMessage::Error(error) => {
+                            if let Some(id) = &error.id { pings.remove(id); }
+                            false
+                        }
+                        _ => false,
+                    };
+                    if control { controls += 1; } else { ordinary += 1; }
+                    let send = send_owned(&mut remote,message);
+                    sends.push(async move { (control, ping_reply, send.await) });
                 }
             }
         }

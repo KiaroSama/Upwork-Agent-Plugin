@@ -8,6 +8,7 @@ struct Sample {
     wall: Instant,
     cpu: ProcessTime,
     reads: usize,
+    parses: usize,
 }
 impl Sample {
     fn start(route: &Route) -> Self {
@@ -15,6 +16,7 @@ impl Sample {
             wall: Instant::now(),
             cpu: ProcessTime::try_now().expect("Process CPU clock must be available"),
             reads: route.snapshot_reads.load(Ordering::Relaxed),
+            parses: route.snapshot_parses.load(Ordering::Relaxed),
         }
     }
     fn finish(
@@ -29,6 +31,7 @@ impl Sample {
             "profiles": profiles, "sample": sample, "workload": workload,
             "elapsed_us": self.wall.elapsed().as_micros(), "cpu_us": cpu.as_micros(),
             "snapshot_reads": route.snapshot_reads.load(Ordering::Relaxed) - self.reads,
+            "snapshot_parses": route.snapshot_parses.load(Ordering::Relaxed) - self.parses,
             "cpu_scope": "isolated test process including runtime; other nextest processes excluded",
             "read_scope": "snapshot read attempts, not kernel syscalls or physical disk reads",
             "workers": 1, "os": std::env::consts::OS, "arch": std::env::consts::ARCH,
@@ -65,6 +68,9 @@ async fn measure_small_and_large_route_checks_with_revocation_controls() {
             }
             let row = start.finish(&route, profiles, sample, "sequential-checks");
             assert_eq!(row["snapshot_reads"], 8);
+            assert_eq!(row["snapshot_parses"], 1);
+            route.clone().check().unwrap();
+            assert_eq!(route.snapshot_parses.load(Ordering::Relaxed), 1);
             rows.push(row);
             let before = route.snapshot_reads.load(Ordering::Relaxed);
             route.guard(async {}).await.unwrap();
@@ -83,6 +89,7 @@ async fn measure_small_and_large_route_checks_with_revocation_controls() {
             .unwrap();
             let row = start.finish(&route, profiles, sample, "idle-guard-225ms");
             assert!(row["snapshot_reads"].as_u64().unwrap() >= 3);
+            assert_eq!(row["snapshot_parses"], 0);
             rows.push(row);
             let start = Sample::start(&route);
             let gate = tokio::sync::Barrier::new(2);
@@ -101,9 +108,17 @@ async fn measure_small_and_large_route_checks_with_revocation_controls() {
             two.unwrap();
             let row = start.finish(&route, profiles, sample, "two-concurrent-guards");
             assert!(row["snapshot_reads"].as_u64().unwrap() >= 4);
+            assert_eq!(row["snapshot_parses"], 0);
             rows.push(row);
         }
         let route = Route::new(path.clone()).unwrap();
+        route.check().unwrap();
+        let original = fs::read(&path).unwrap();
+        fs::write(&path, [original.as_slice(), b" \n"].concat()).unwrap();
+        route.clone().check().unwrap();
+        assert_eq!(route.snapshot_parses.load(Ordering::Relaxed), 2);
+        route.check().unwrap();
+        assert_eq!(route.snapshot_parses.load(Ordering::Relaxed), 2);
         config::update(&path, |value| {
             value.mode = Mode::Blocked;
             Ok(())

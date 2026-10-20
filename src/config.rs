@@ -1,5 +1,5 @@
 mod document;
-pub(crate) use document::{Selection, read_snapshot};
+pub(crate) use document::{Selection, parse_snapshot, read_snapshot};
 
 use crate::{
     error::{Error, Result},

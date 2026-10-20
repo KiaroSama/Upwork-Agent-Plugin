@@ -7,7 +7,7 @@ use std::{
     future::Future,
     path::PathBuf,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicBool, Ordering},
     },
     time::Duration,
@@ -22,6 +22,9 @@ pub struct Route {
     identity: Selection,
     revision: Option<String>,
     revoked: Arc<AtomicBool>,
+    validated_bytes: Arc<Mutex<Option<Vec<u8>>>>,
+    #[cfg(test)]
+    snapshot_parses: Arc<std::sync::atomic::AtomicUsize>,
     #[cfg(test)]
     snapshot_reads: Arc<std::sync::atomic::AtomicUsize>,
 }
@@ -39,6 +42,9 @@ impl Route {
             identity,
             revision: snapshot.revision,
             revoked: Arc::new(AtomicBool::new(false)),
+            validated_bytes: Arc::new(Mutex::new(None)),
+            #[cfg(test)]
+            snapshot_parses: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
             #[cfg(test)]
             snapshot_reads: Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         })
@@ -54,11 +60,7 @@ impl Route {
         // between watcher ticks. Inactive edits retain it and do not disconnect.
         #[cfg(test)]
         self.snapshot_reads.fetch_add(1, Ordering::Relaxed);
-        let unchanged = config::read_snapshot(&self.path).is_ok_and(|snapshot| {
-            snapshot.revision == self.revision
-                && Selection::from_config(&snapshot.connections)
-                    .is_ok_and(|identity| identity == self.identity)
-        });
+        let unchanged = self.validate_current_bytes().is_ok();
         if unchanged && !self.revoked.load(Ordering::Acquire) {
             Ok(())
         } else {
@@ -66,6 +68,29 @@ impl Route {
             self.revoked.store(true, Ordering::Release);
             Err(Self::changed_error())
         }
+    }
+    fn validate_current_bytes(&self) -> Result<()> {
+        // Read and validate the opened file every time. Only identical bytes can
+        // reuse a prior parse; timestamps and writer cooperation are irrelevant.
+        let bytes =
+            crate::storage::optional_bytes(&self.path, false)?.ok_or_else(Self::changed_error)?;
+        let mut validated = self
+            .validated_bytes
+            .lock()
+            .map_err(|_| Self::changed_error())?;
+        if validated.as_deref() == Some(bytes.as_slice()) {
+            return Ok(());
+        }
+        #[cfg(test)]
+        self.snapshot_parses.fetch_add(1, Ordering::Relaxed);
+        let snapshot = config::parse_snapshot(&bytes)?;
+        if snapshot.revision != self.revision
+            || Selection::from_config(&snapshot.connections)? != self.identity
+        {
+            return Err(Self::changed_error());
+        }
+        *validated = Some(bytes);
+        Ok(())
     }
     pub async fn changed(&self) {
         let mut timer = tokio::time::interval(Duration::from_millis(100));
