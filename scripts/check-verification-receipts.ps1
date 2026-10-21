@@ -161,7 +161,7 @@ while (-not [IO.File]::Exists($Ready)) {
                 $batch = "@echo off`r`nstart `"`" /b `"$pwsh`" -NoProfile -NonInteractive -File `"$(Join-Path $sandbox 'sleeper.ps1')`" -PidFile `"$pidFile`" -Ready `"$release`"$nullOutput`r`n`"$pwsh`" -NoProfile -NonInteractive -File `"$gateScript`" -Ready `"$release`"`r`nexit /b 0`r`n"
                 $batchFile = Join-Path $sandbox 'spawn.cmd'
                 [IO.File]::WriteAllText($batchFile, $batch, [Text.UTF8Encoding]::new($false))
-                $invokeText = "& (Join-Path `$PSScriptRoot 'scripts/verify.ps1') -CargoArgs @('/d','/c','`"`"$batchFile`"`"') -WallSeconds 8 -IdleSeconds 5`nexit `$LASTEXITCODE`n"
+                $invokeText = "& (Join-Path `$PSScriptRoot 'scripts/verify.ps1') -CargoArgs @('/d','/c','spawn.cmd') -WallSeconds 8 -IdleSeconds 5`nexit `$LASTEXITCODE`n"
                 [IO.File]::WriteAllText((Join-Path $sandbox 'descendants.ps1'), $invokeText, [Text.UTF8Encoding]::new($false))
             }
             $info = [Diagnostics.ProcessStartInfo]::new($pwsh)
@@ -178,7 +178,13 @@ while (-not [IO.File]::Exists($Ready)) {
                 $stdout = $process.StandardOutput.ReadToEndAsync(); $stderr = $process.StandardError.ReadToEndAsync()
                 $deadline = [Diagnostics.Stopwatch]::StartNew()
                 while (-not [IO.File]::Exists($pidFile)) {
-                    if ($process.HasExited -or $deadline.Elapsed.TotalSeconds -ge 8) { throw 'Descendant fixture did not reach readiness.' }
+                    if ($process.HasExited -or $deadline.Elapsed.TotalSeconds -ge 8) {
+                        if ($process.HasExited -and [Threading.Tasks.Task]::WaitAll([Threading.Tasks.Task[]]@($stdout, $stderr), 1000)) {
+                            Write-Host $stdout.GetAwaiter().GetResult()
+                            Write-Host $stderr.GetAwaiter().GetResult()
+                        }
+                        throw 'Descendant fixture did not reach readiness.'
+                    }
                     Start-Sleep -Milliseconds 10
                 }
                 $descendant = Get-Process -Id ([int][IO.File]::ReadAllText($pidFile).Trim()) -ErrorAction Stop
