@@ -94,7 +94,7 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
             "oversized"=>fs::File::create(&path)?.set_len((LIMIT+1)as u64)?,
             "dangling"=>{symlink(root.path().join("absent-target"),&path)?;if command=="bridge"{
                 let legacy=root.path().join(".state/auth/mcp-remote-v1");fs::create_dir_all(&legacy)?;
-                use md5::{Digest,Md5};let name=format!("{:x}_tokens.json",Md5::digest(super::fixture::ENDPOINT.as_bytes()));fs::write(legacy.join(name),"{}")?;
+                let store=upwork_connector::credentials::Store{root:root.path().to_path_buf()};fs::write(store.legacy_path("tokens"),"{}")?;
             }},
             "ignored_utf8"=>fs::write(&path,b"{\"version\":1,\"mode\":\"direct\",\"selected\":null,\"profiles\":[],\"ignored\":\"\xff\"}")?,
             _=>fs::write(&path,b"\xff")?,
