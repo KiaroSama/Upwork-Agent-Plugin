@@ -159,6 +159,15 @@ pub async fn run(root: &Path, endpoint: &str, sign_in: bool) -> Result<()> {
     let log = Log::new(root, "upwork-bridge");
     log.event("INFO", "Native connector started.");
     let result = run_session(root, endpoint, sign_in, &log).await;
+    if let Err(Error::Auth(error)) = &result {
+        log.event(
+            "ERROR",
+            &format!(
+                "OAuth failure class={}; HTTP stage/status recorded separately.",
+                crate::diagnostics::auth(error)
+            ),
+        );
+    }
     if let Err(Error::Transport(class)) = &result {
         log.event(
             "ERROR",

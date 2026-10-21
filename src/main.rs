@@ -77,7 +77,7 @@ async fn execute() -> Result<()> {
     let command = validated_command(&args)?;
     upwork_connector::register::prepare_cache(&root)?;
     let log = Log::new(&root, "upwork-native");
-    log.event("INFO", "Native executable started version=2.1.12.");
+    log.event("INFO", "Native executable started version=2.1.13.");
     let result = dispatch(root, &args, command, &log).await;
     if let Err(Error::Auth(error)) = &result {
         log.event(
@@ -234,7 +234,7 @@ async fn dispatch(root: PathBuf, args: &[String], command: &str, log: &Log) -> R
             Ok(())
         }
         "--version" => {
-            println!("upwork-connector 2.1.12");
+            println!("upwork-connector 2.1.13");
             Ok(())
         }
         _ => Err(Error::Safe(

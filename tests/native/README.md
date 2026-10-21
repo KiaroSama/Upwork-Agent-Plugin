@@ -9,7 +9,7 @@ The controller bounds each suite to180seconds and kills/reaps its owned process 
 Requirements: the pinned Rust toolchain and existing Cargo dev dependencies, plus Ubuntu's OpenSSL, tar, sha256sum, mkfifo, kill and `/usr/bin/time` tools. No Python, pip or cryptography installation. The runner is test tooling only and is never included in production archives. Invocation from the repository root in GitHub-hosted Linux CI:
 
 ```bash
-cargo run --locked --example native-acceptance -- --archive dist/upwork-agent-plugin-2.1.12-linux-x64.tar.gz --output .ci-work/native-acceptance
+cargo run --locked --example native-acceptance -- --archive dist/upwork-agent-plugin-2.1.13-linux-x64.tar.gz --output .ci-work/native-acceptance
 ```
 
 Output must be a new empty project-owned directory. UTF-8 JSON receipts and one UTC log per probe are retained; raw OAuth URLs/state/tokens and certificate private keys are never exported. Temporary fixture directories and the extracted executable are removed after success. A failed assertion is a real nonzero failure, not a retry or skip. Baseline audit receipts remain separate and are not counted as after-fix executions.

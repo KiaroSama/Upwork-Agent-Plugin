@@ -128,6 +128,18 @@ silently dropping a message or replaying uncertain work. This replaces the previ
 backpressure contract. Route change and downstream EOF remain cancellation paths; a host that stops
 reading stdout can still impose output backpressure.
 
+## OAuth diagnostic boundaries
+
+The OAuth HTTP adapter records fixed request-shape stages (`metadata` for GET, `token` for form POST,
+`registration` for JSON POST, otherwise `http`), request/header/body/route phases, and numeric observed
+HTTP status before the SDK can erase error types. These labels do not inspect URLs or form contents,
+and token exchange versus refresh is not inferred from private bodies. HTTP responses are returned
+unchanged, including rejection statuses; successful headers are recorded to correlate later SDK parser
+errors. Adapter errors have safe Display/Debug and terminate the raw source chain after recording typed metadata,
+because the SDK formats every source in that chain.
+Per-run `upwork-oauth` logs never serialize URLs, headers, bodies, grants, tokens or upstream error text.
+The selected-route guard, 30-second deadline and 1 MiB response limit remain in force.
+
 ## Bounded cleanup and verification receipts
 
 Native cleanup inspects at most1000 entries plus one lookahead. `inspection_truncated=true` means the

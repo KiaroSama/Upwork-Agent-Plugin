@@ -1,4 +1,7 @@
 mod callback_transaction;
+mod http_diagnostics;
+#[cfg(test)]
+mod http_tests;
 mod local_callback;
 mod registration;
 
@@ -19,6 +22,7 @@ pub struct OAuthRoute {
     route: Route,
     follow: reqwest::Client,
     stop: reqwest::Client,
+    log: Option<Log>,
 }
 impl OAuthRoute {
     pub fn new(route: Route) -> Result<Self> {
@@ -26,56 +30,103 @@ impl OAuthRoute {
             follow: route.client(true, Some(Duration::from_secs(30)))?,
             stop: route.client(false, Some(Duration::from_secs(30)))?,
             route,
+            log: None,
         })
+    }
+    pub fn with_log(mut self, log: Log) -> Self {
+        self.log = Some(log);
+        self
+    }
+    async fn execute_http(
+        &self,
+        request: http::Request<Vec<u8>>,
+        policy: OAuthHttpRedirectPolicy,
+    ) -> std::result::Result<http::Response<Vec<u8>>, OAuthHttpClientError> {
+        let stage = http_diagnostics::stage(&request);
+        let mut phase = "request";
+        let mut status = 0;
+        let result = self
+            .route
+            .guard(async {
+                let client = if policy == OAuthHttpRedirectPolicy::Stop {
+                    &self.stop
+                } else {
+                    &self.follow
+                };
+                let request = reqwest::Request::try_from(request)
+                    .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
+                phase = "headers";
+                let mut result = client
+                    .execute(request)
+                    .await
+                    .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
+                status = result.status().as_u16();
+                if result.status().is_success() {
+                    if let Some(log) = &self.log {
+                        log.event("INFO", &format!("OAuth HTTP response stage={stage} phase=headers http_status={status}"));
+                    }
+                } else {
+                    http_diagnostics::event(
+                        self.log.as_ref(),
+                        stage,
+                        phase,
+                        "http_status",
+                        status,
+                        "",
+                    );
+                }
+                let mut response = http::Response::builder()
+                    .status(result.status())
+                    .version(result.version());
+                for (name, value) in result.headers() {
+                    response = response.header(name, value);
+                }
+                phase = "body";
+                let mut body = Vec::new();
+                while let Some(chunk) = result
+                    .chunk()
+                    .await
+                    .map_err(|e| Box::new(e) as OAuthHttpClientError)?
+                {
+                    if chunk.len() > 1024 * 1024 - body.len() {
+                        return Err(Box::new(Error::Safe("OAuth response too large."))
+                            as OAuthHttpClientError);
+                    }
+                    body.extend_from_slice(&chunk);
+                }
+                response
+                    .body(body)
+                    .map_err(|e| Box::new(e) as OAuthHttpClientError)
+            })
+            .await;
+        match result {
+            Ok(Ok(response)) => Ok(response),
+            Ok(Err(error)) => Err(http_diagnostics::failure(
+                self.log.as_ref(),
+                stage,
+                phase,
+                status,
+                error,
+            )),
+            Err(error) => Err(http_diagnostics::failure(
+                self.log.as_ref(),
+                stage,
+                "route",
+                status,
+                Box::new(error),
+            )),
+        }
     }
 }
 impl OAuthHttpClient for OAuthRoute {
     fn execute(&self, operation: OAuthHttpRequest) -> OAuthHttpClientFuture<'_> {
-        Box::pin(async move {
-            self.route
-                .guard(async {
-                    let client = if operation.redirect_policy == OAuthHttpRedirectPolicy::Stop {
-                        &self.stop
-                    } else {
-                        &self.follow
-                    };
-                    let request = reqwest::Request::try_from(operation.request)
-                        .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
-                    let mut result = client
-                        .execute(request)
-                        .await
-                        .map_err(|e| Box::new(e) as OAuthHttpClientError)?;
-                    let mut response = http::Response::builder()
-                        .status(result.status())
-                        .version(result.version());
-                    for (name, value) in result.headers() {
-                        response = response.header(name, value);
-                    }
-                    let mut body = Vec::new();
-                    while let Some(chunk) = result
-                        .chunk()
-                        .await
-                        .map_err(|e| Box::new(e) as OAuthHttpClientError)?
-                    {
-                        if chunk.len() > 1024 * 1024 - body.len() {
-                            return Err(Box::new(Error::Safe("OAuth response too large."))
-                                as OAuthHttpClientError);
-                        }
-                        body.extend_from_slice(&chunk);
-                    }
-                    response
-                        .body(body)
-                        .map_err(|e| Box::new(e) as OAuthHttpClientError)
-                })
-                .await
-                .map_err(|e| Box::new(e) as OAuthHttpClientError)?
-        })
+        Box::pin(self.execute_http(operation.request, operation.redirect_policy))
     }
 }
 pub async fn manager(route: Route, store: Store, endpoint: &str) -> Result<AuthorizationManager> {
     let mut manager = AuthorizationManager::new_with_oauth_http_client(
         endpoint,
-        Arc::new(OAuthRoute::new(route)?),
+        Arc::new(OAuthRoute::new(route)?.with_log(Log::new(&store.root, "upwork-oauth"))),
     )
     .await?;
     manager.set_credential_store(store);

@@ -8,6 +8,21 @@ pub fn auth(error: &AuthError) -> &'static str {
         AuthError::CredentialStoreError(_) => "credential_store",
         AuthError::HttpError(_) => "oauth_http",
         AuthError::MetadataError(_) => "oauth_metadata",
+        AuthError::AuthorizationFailed(_) => "authorization_failed",
+        AuthError::TokenExchangeFailed(_) => "token_exchange_failed",
+        AuthError::OAuthError(_) => "oauth_protocol",
+        AuthError::PkceUnsupported => "pkce_unsupported",
+        AuthError::UrlError(_) => "oauth_url",
+        AuthError::NoAuthorizationSupport => "authorization_unsupported",
+        AuthError::InternalError(_) => "oauth_internal",
+        AuthError::InvalidTokenType(_) => "invalid_token_type",
+        AuthError::TokenExpired => "token_expired",
+        AuthError::InvalidScope(_) => "invalid_scope",
+        AuthError::RegistrationFailed(_) => "registration_failed",
+        AuthError::InsufficientScope { .. } => "insufficient_scope",
+        AuthError::AuthorizationServerMismatch { .. } => "issuer_mismatch",
+        AuthError::AuthorizationServerMissingIssuer { .. } => "issuer_missing",
+        AuthError::ClientCredentialsError(_) => "client_credentials",
         _ => "oauth_other",
     }
 }
@@ -94,6 +109,26 @@ pub fn network_context(error: &reqwest::Error) -> String {
 mod tests {
     use super::*;
     use std::borrow::Cow;
+
+    #[test]
+    fn oauth_labels_distinguish_safe_operation_failures() {
+        let private = "sentinel-token https://private.invalid/?code=sentinel";
+        let errors = [
+            AuthError::TokenExchangeFailed(private.into()),
+            AuthError::RegistrationFailed(private.into()),
+            AuthError::AuthorizationFailed(private.into()),
+            AuthError::InvalidScope(private.into()),
+        ];
+        assert_eq!(
+            errors.each_ref().map(auth),
+            [
+                "token_exchange_failed",
+                "registration_failed",
+                "authorization_failed",
+                "invalid_scope"
+            ]
+        );
+    }
 
     #[test]
     fn diagnostic_labels_never_include_untrusted_error_payloads() {
