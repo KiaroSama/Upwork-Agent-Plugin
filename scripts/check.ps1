@@ -34,12 +34,23 @@ try {
             if ($errors.Count) { throw "Invalid PowerShell syntax: $file" }
         }
     }
+    if (@($files | Where-Object { [IO.Path]::GetExtension($_) -in @('.py', '.pyw', '.pyc') }).Count) { throw 'Python source is not permitted in this Rust project.' }
+    $native = Join-Path $root 'tests/native'
+    $nativeSources = @('main', 'controller', 'child', 'fixture', 'initialization', 'protocol', 'oracle', 'cli', 'state', 'coordination', 'ordinary')
+    $discovered = @(Get-ChildItem -LiteralPath $native -Filter '*.rs' -File | ForEach-Object BaseName)
+    if (@(Compare-Object $nativeSources $discovered).Count) { throw 'Native acceptance source inventory differs from its reviewed controller.' }
+    $controller = [IO.File]::ReadAllText((Join-Path $native 'controller.rs'), $utf8)
+    foreach ($suite in @('probe-oracles', 'cli', 'protocol', 'extended', 'sign-in', 'bridge', 'credential-coordination', 'initialization-ping', 'state-reader', 'import-scale', 'route-revision', 'http-media', 'ordinary-http')) {
+        if (-not $controller.Contains('"' + $suite + '"')) { throw "Native acceptance suite omitted: $suite" }
+    }
     $tests = @(Get-ChildItem -LiteralPath (Join-Path $root 'tests') -Filter '*.rs' -File)
     if ($tests.Count -lt 3) { throw 'Rust regression suites missing.' }
     $metadata = & cargo metadata --no-deps --format-version 1 --locked | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw 'Cargo metadata failed.' }
     $targets = @($metadata.packages[0].targets | Where-Object { $_.kind -contains 'test' })
     $workflow = [IO.File]::ReadAllText((Join-Path $root '.github/workflows/ci.yml'), $utf8)
+    if (-not $workflow.Contains("'--example', 'native-acceptance'")) { throw 'Rust native acceptance omitted from CI.' }
+    if (-not @($metadata.packages[0].targets | Where-Object { $_.name -eq 'native-acceptance' -and $_.kind -contains 'example' }).Count) { throw 'Rust native acceptance omitted from Cargo.' }
     foreach ($policy in @('check-unix-build', 'check-permission-root', 'check-package-policy', 'check-verification-receipts', 'check-signed-stage')) {
         if (-not $workflow.Contains("./scripts/$policy.ps1")) { throw "Policy fixture omitted from CI: $policy" }
     }

@@ -34,8 +34,13 @@ axum = "0.8"
 base64 = "0.23"
 cpu-time = "=1.0.0"
 tempfile = "3"
-tokio = { version = "1", features = ["test-util"] }
+tokio = { version = "1", features = ["test-util", "process"] }
 tokio-rustls = "0.26"
+
+[[example]]
+name = "native-acceptance"
+path = "tests/native/main.rs"
+test = false
 
 [lints.rust]
 unsafe_code = "forbid"

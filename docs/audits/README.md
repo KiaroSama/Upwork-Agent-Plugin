@@ -25,8 +25,9 @@ are never attributed to a later tree.
 
 - Refresh waiting, route transition revisions and bounded import reads are implemented by the source
   above; earlier deferred language is historical, not an open defect.
-- Native fixture Python pin now lives in `tests/native/requirements.txt` with one pip update route;
-  full transitive hash locking remains unclaimed. Safe HTTP phase/status diagnostics are separate
+- Native acceptance fixtures are now Rust-only; see [the current runner](../../tests/native/README.md)
+  and [source-to-target contract mapping](../../tests/native/PARITY.md). Historical Python fixture
+  paths below refer to the original reviewed commits, not current commands or dependencies. Safe HTTP phase/status diagnostics are separate
   from resolving an unknown live network cause.
 - General fuzz/property infrastructure, OS credential-store migration, single-flight refresh,
   periodic scheduled tests and multi-connection callback redesign remain unadopted proposals.

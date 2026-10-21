@@ -1,2 +1,0 @@
-# Isolated native TLS fixtures only; no application Python runtime.
-cryptography==50.0.2

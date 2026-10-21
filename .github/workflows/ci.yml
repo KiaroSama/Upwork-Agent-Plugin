@@ -140,14 +140,9 @@ jobs:
         if: matrix.platform == 'linux-x64'
         timeout-minutes: 15
         run: |
-          python3 -m venv .ci-work/native-probe-env
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $python = Join-Path $PWD '.ci-work/native-probe-env/bin/python'
-          & $python -m pip install --disable-pip-version-check --only-binary=:all: -r tests/native/requirements.txt
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $archives = @(Get-ChildItem dist/upwork-agent-plugin-*-linux-x64.tar.gz)
           if ($archives.Count -ne 1) { throw 'Expected one packaged Linux binary.' }
-          & $python -I tests/native/run.py --archive $archives[0].FullName --output .ci-work/native-acceptance
+          ./scripts/verify.ps1 -CargoArgs @('run', '--locked', '--example', 'native-acceptance', '--', '--archive', $archives[0].FullName, '--output', '.ci-work/native-acceptance')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload ready-to-run archive and checksum
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -188,6 +183,7 @@ jobs:
             .ci-work/launcher-boundaries.json
             .ci-work/native-acceptance/*.json
             .ci-work/native-acceptance/*.log
+            .ci-work/native-acceptance/logs/*.log
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
