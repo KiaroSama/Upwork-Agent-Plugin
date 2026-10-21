@@ -32,6 +32,7 @@ namespace UpworkVerification {
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job, int kind, out Accounting value, uint size, IntPtr returned);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job, int kind, IntPtr value, uint size, IntPtr returned);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+        [DllImport("kernel32.dll", SetLastError=true)] static extern bool IsProcessInJob(IntPtr process, IntPtr job, out bool member);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateJobObject(IntPtr job, uint code);
         [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
         IntPtr handle;
@@ -46,6 +47,7 @@ namespace UpworkVerification {
             } catch { Dispose(); throw; }
         }
         public void Assign(IntPtr process) { Check(AssignProcessToJobObject(handle, process)); }
+        public bool Contains(IntPtr process) { bool member; Check(IsProcessInJob(process, handle, out member)); return member; }
         public uint Active {
             get {
                 Accounting value;
@@ -108,7 +110,8 @@ function New-VerificationOwner([string]$Directory, [string[]]$Arguments) {
     }
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $info
-    @{ Process = $process; Job = $job; Group = $null; GroupFile = $groupFile; Gate = $gate; Directory = $Directory; Started = $false; Ps = $null; Kill = $null }
+    $compilerCommand = $Arguments.Count -gt 0 -and $Arguments[0] -in @('clippy', 'build', 'nextest')
+    @{ Process = $process; Job = $job; Group = $null; GroupFile = $groupFile; Gate = $gate; Directory = $Directory; Started = $false; Ps = $null; Kill = $null; CompilerCommand = $compilerCommand; CompilerAuxiliaries = 0 }
 }
 
 function Start-VerificationOwner($Owner) {
@@ -144,12 +147,54 @@ function Test-VerificationMembers($Owner) {
     return @($rows | Where-Object { $_ -match '^\s*\d+\s+(\d+)\s+(\S+)' -and [int]$Matches[1] -eq $Owner.Group -and -not $Matches[2].StartsWith('Z') }).Count -gt 0
 }
 
+function Test-VerificationCompilerAuxiliaryPath([string]$Path) {
+    if (-not $IsWindows) { return $false }
+    foreach ($base in @($env:ProgramFiles, ${env:ProgramFiles(x86)})) {
+        if ([string]::IsNullOrWhiteSpace($base)) { continue }
+        $prefix = [regex]::Escape((Join-Path $base 'Microsoft Visual Studio') + '\')
+        if ($Path -notmatch ('^' + $prefix + '[^\\]+\\[^\\]+\\VC\\Tools\\MSVC\\[0-9.]+\\bin\\Host(?:x64|arm64)\\(?:x64|arm64)\\vctip\.exe$')) { continue }
+        $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+        while ($null -ne $item) {
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { return $false }
+            $item = if ($item -is [IO.FileInfo]) { $item.Directory } else { $item.Parent }
+        }
+        return $true
+    }
+    return $false
+}
+
+function Stop-VerificationCompilerAuxiliaries($Owner) {
+    if (-not $IsWindows -or -not $Owner.CompilerCommand) { return $false }
+    $count = 0
+    foreach ($memberId in $Owner.Job.Members()) {
+        $member = $null
+        try {
+            $member = [Diagnostics.Process]::GetProcessById($memberId)
+            $handle = $member.Handle
+            if (-not $Owner.Job.Contains($handle)) { return $false }
+            if ($member.HasExited) { continue }
+            $path = $member.MainModule.FileName
+            if (-not (Test-VerificationCompilerAuxiliaryPath $path)) { return $false }
+            $signature = Get-AuthenticodeSignature -LiteralPath $path -ErrorAction Stop
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -cne 'Microsoft Corporation') { return $false }
+            $count++
+        } catch { return $false }
+        finally { if ($null -ne $member) { $member.Dispose() } }
+    }
+    if ($count -eq 0) { return $false }
+    Stop-VerificationOwner $Owner
+    $Owner.CompilerAuxiliaries += $count
+    Write-Host "Settled Microsoft-signed MSVC telemetry auxiliaries count=$count; owned Job verified empty."
+    return $true
+}
+
 function Wait-VerificationEmpty($Owner) {
     # The root exit signal can precede Job accounting or a child's final teardown.
     # Observe natural completion briefly; a still-running descendant is a failure.
     $watch = [Diagnostics.Stopwatch]::StartNew()
     while (Test-VerificationMembers $Owner) {
         if ($watch.Elapsed.TotalSeconds -ge 1) {
+            if (Stop-VerificationCompilerAuxiliaries $Owner) { return $true }
             if ($IsWindows) {
                 try {
                     foreach ($memberId in $Owner.Job.Members()) {

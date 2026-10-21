@@ -123,6 +123,13 @@ while (-not [IO.File]::Exists($Ready)) {
 Start-Sleep -Seconds 60
 '@, [Text.UTF8Encoding]::new($false))
     }
+    if ($IsWindows) {
+        # A signed executable renamed vctip outside MSVC must not earn auxiliary status.
+        $fake = Join-Path $sandbox 'vctip.exe'
+        Copy-Item -LiteralPath $env:ComSpec -Destination $fake
+        . (Join-Path $PSScriptRoot 'verification-process.ps1')
+        if (Test-VerificationCompilerAuxiliaryPath $fake) { throw 'An impostor path earned compiler auxiliary status.' }
+    }
     foreach ($inheritOutput in @($false, $true)) {
             $pidFile = Join-Path $sandbox 'descendant.pid'
             $release = Join-Path $sandbox 'descendant.ready'
@@ -189,7 +196,7 @@ while (-not [IO.File]::Exists($Ready)) {
                 $new = @(Get-ChildItem -LiteralPath (Join-Path $sandbox '.ci-work/verification') -Filter '*.json' | Where-Object FullName -notin $previous.FullName)
                 if ($new.Count -ne 1) { throw 'Descendant receipt missing.' }
                 $value = Get-Content -LiteralPath $new[0].FullName -Raw -Encoding utf8 | ConvertFrom-Json
-                if (-not $value.reaped -or (-not $value.descendants_detected -and -not $value.expired) -or $value.exitCode -eq 0) { throw 'Invalid descendant receipt.' }
+                if (-not $value.reaped -or (-not $value.descendants_detected -and -not $value.expired) -or $value.exitCode -eq 0 -or $value.compiler_auxiliaries_settled -ne 0) { throw 'Invalid descendant receipt.' }
             } finally {
                 if ($null -ne $descendant) {
                     if (-not $descendant.HasExited) { try { $descendant.Kill(); $null = $descendant.WaitForExit(5000) } catch {} }

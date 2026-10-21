@@ -144,7 +144,13 @@ serial libtest has the outer wrapper bounds, not per-case Nextest isolation.
 Before Cargo starts, the verification driver establishes a Windows kill-on-close Job Object or a
 verified Unix process group. Cleanup does not depend on Cargo's root PID remaining alive. A nominal
 successful command with surviving owned descendants fails verification; wall/idle expiry terminates
-the owned group/job. Receipts distinguish cleanup from detected survivors and timeout. On Unix the
+the owned group/job. Windows compiler commands (`clippy`, `build`, `nextest`) have one narrow auxiliary
+custody policy: a surviving `vctip.exe` must belong to the owned Job, reside in a non-reparse installed
+Visual Studio/MSVC path under Program Files, and carry a valid Microsoft Corporation signature.
+Only when every live member qualifies is the entire Job terminated and verified empty without changing
+Cargo's original exit code; `compiler_auxiliaries_settled` records the count. This is explicit cleanup,
+not natural exit. Unknown/impostor descendants still fail, including ordinary sleeper fixtures.
+Receipts distinguish cleanup from detected survivors and timeout. On Unix the
 receipt means no running group members and the direct child waited; orphan zombies belong to init,
 and arbitrary descendants deliberately escaping their group are not certified. This is build-tool
 lifetime ownership, not a hostile-code sandbox. Native CLI rejection checks require controlled exit1

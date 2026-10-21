@@ -111,7 +111,7 @@ try {
         $end = [DateTime]::UtcNow
         $identity = [Text.Encoding]::UTF8.GetBytes(($CargoArgs | ConvertTo-Json -Compress))
         $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($identity)).ToLowerInvariant()
-        $receipt = @{ run_id = $receiptId; stage = $stage; command_sha256 = $digest; pid = $(if ($started) { $process.Id } else { $null }); start = $start.ToString('o'); end = $end.ToString('o'); elapsed = ($end - $start).TotalSeconds; wall_seconds = $WallSeconds; idle_seconds = $IdleSeconds; started = $started; expired = $expired; outcome = $outcome; exitCode = $code; reaped = $treeReaped; descendants_detected = $survivors; ownership = $(if ($IsWindows) { 'windows-job' } else { 'unix-process-group' }) }
+        $receipt = @{ run_id = $receiptId; stage = $stage; command_sha256 = $digest; pid = $(if ($started) { $process.Id } else { $null }); start = $start.ToString('o'); end = $end.ToString('o'); elapsed = ($end - $start).TotalSeconds; wall_seconds = $WallSeconds; idle_seconds = $IdleSeconds; started = $started; expired = $expired; outcome = $outcome; exitCode = $code; reaped = $treeReaped; descendants_detected = $survivors; compiler_auxiliaries_settled = $(if ($null -ne $owner) { $owner.CompilerAuxiliaries } else { 0 }); ownership = $(if ($IsWindows) { 'windows-job' } else { 'unix-process-group' }) }
         $receipt | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $receiptDirectory "$stage-$receiptId.json") -Encoding utf8NoBOM
         if ($releaseBuild -and $code -ne 0 -and (Test-Path -LiteralPath (Join-Path $work 'build-provenance.json'))) {
             Remove-Item -LiteralPath (Join-Path $work 'build-provenance.json') -Force
