@@ -346,8 +346,11 @@ pub async fn main() -> Result<()> {
             &json!({"binary_sha256":binary_digest,"suites":results}),
         )?;
         println!("{suite}: exit={}", status.code().unwrap_or(-1));
-        require(status.success(), "Native suite failed")?;
     }
+    require(
+        results.iter().all(|row| row["exit"] == 0),
+        "Native suite failed; every remaining suite was still executed",
+    )?;
     require(
         generation(&binary)? == original,
         "Owned executable changed during final suite",
