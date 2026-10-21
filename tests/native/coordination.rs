@@ -141,7 +141,9 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
             if !hold{initialize(&mut children[0],41).await?;server.state.wait("refresh_started",Duration::from_secs(8)).await?;}
             if mode=="concurrent_refresh"{
                 children.push(NativeChild::spawn(binary,root,Some(ca.path()),&["bridge"])?);initialize(&mut children[1],41).await?;
-                let early=timeout(Duration::from_millis(500),children[1].process.wait()).await.is_ok();
+                let end=Instant::now()+Duration::from_millis(500);
+                while Instant::now()<end&&children[1].process.try_wait()?.is_none(){tokio::time::sleep(Duration::from_millis(10)).await;}
+                let early=children[1].process.try_wait()?.is_some();
                 server.state.mark("release",true);
                 let first=children[0].matching(41,8).await?;let second=children[1].matching(41,8).await?;
                 let d=server.state.data.lock().unwrap();

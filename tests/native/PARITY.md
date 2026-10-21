@@ -23,6 +23,7 @@ Source: [`e844c50`](https://github.com/KiaroSama/Upwork-Agent-Plugin/tree/e844c5
 - JSON numbers are not booleans; integer and string request IDs stay distinct. UTF-8 failures cannot become valid protocol or unrelated-negative success.
 - Hashes bind executable bytes once per invocation and are reused in all receipts. Monotonic deadlines replace Python monotonic; no relaxed timeout or retry.
 - OpenSSL creates disposable RSA2048 fixture CA/leaf with hostname SAN/server EKU; Rust TLS terminates CONNECT locally. Only owned child environments trust that CA; no system trust or live account requests.
+- Observing an active child uses `try_wait`, not Tokio `wait`: the latter closes its stdin before awaiting, unlike Python `poll`. Waiting for final exit still explicitly closes/reaps it.
 - Linux observed `/proc` stopped state replaces waitpid WUNTRACED, preserving an actual process-stop barrier rather than elapsed-time readiness.
 - Receipt comparison is structural/semantic, not byte-exact for elapsed/CPU durations, random paths, certificate serials or timestamps. All assertion outcomes, counts, message types, route/state preservation and exits remain gating.
 - Historical baseline-only diagnosis flags are not current acceptance modes. Source remains retrievable at the immutable commit for rollback; no old interpreter is required by current CI. Production behavior/version/release unchanged.
