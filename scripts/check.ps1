@@ -36,7 +36,7 @@ try {
     }
     if (@($files | Where-Object { [IO.Path]::GetExtension($_) -in @('.py', '.pyw', '.pyc') }).Count) { throw 'Python source is not permitted in this Rust project.' }
     $native = Join-Path $root 'tests/native'
-    $nativeSources = @('main', 'controller', 'child', 'fixture', 'initialization', 'protocol', 'oracle', 'cli', 'state', 'coordination', 'ordinary')
+    $nativeSources = @('entry', 'controller', 'child', 'fixture', 'initialization', 'protocol', 'oracle', 'cli', 'state', 'coordination', 'ordinary')
     $discovered = @(Get-ChildItem -LiteralPath $native -Filter '*.rs' -File | ForEach-Object BaseName)
     if (@(Compare-Object $nativeSources $discovered).Count) { throw 'Native acceptance source inventory differs from its reviewed controller.' }
     $controller = [IO.File]::ReadAllText((Join-Path $native 'controller.rs'), $utf8)

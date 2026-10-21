@@ -39,7 +39,7 @@ tokio-rustls = "0.26"
 
 [[example]]
 name = "native-acceptance"
-path = "tests/native/main.rs"
+path = "tests/native/entry.rs"
 test = false
 
 [lints.rust]

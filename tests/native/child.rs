@@ -313,8 +313,8 @@ pub async fn execute(
         let mut observed=super::oracle::Observation::default(); let mut callback_sent=false;
         if mode=="bridge" { child.bytes(&format!("{INITIALIZE}\n")).await?; }
         while let Some(line)=child.line(end).await {
-            if mode=="sign-in" { if callback(&line).await? { callback_sent=true; } }
-            else {
+            if mode=="sign-in" && callback(&line).await? { callback_sent=true; }
+            else if mode=="bridge" {
                 observed.line(&line);
                 if observed.first.is_some() {
                     if observed.first==Some("result") && let Some(state)=ready {
@@ -332,7 +332,7 @@ pub async fn execute(
         let new_logs=diagnostic.strip_prefix(before.as_str()).unwrap_or(&diagnostic);
         Ok(json!({"returncode":code,"callback_sent":callback_sent,
             "protocol_invalid":observed.invalid||child.reader_invalid,
-            "transport_rejected":["class=unexpected_http_response","class=unexpected_content_type"].iter().any(|class|new_logs.contains(class)),
+            "transport_rejected":(["class=unexpected_http_response","class=unexpected_content_type"].iter().any(|class|new_logs.contains(class))),
             "first_terminal_message":observed.first,"completion_claimed":child.records.iter().any(|line|line.windows(17).any(|v|v==b"Sign-in complete.")),
             "controller_timeout":timed,"elapsed_seconds":started.elapsed().as_secs_f64(),
             "private_marker_in_stderr":String::from_utf8_lossy(&child.errors).contains("private-fixture-marker")}))

@@ -219,12 +219,13 @@ pub async fn main() -> Result<()> {
         "Controller started; one immutable packaged executable and thirteen sequential suites.",
     );
     let expected = fs::read_to_string(PathBuf::from(format!("{}.sha256", archive.display())))?;
+    let archive_digest = digest(&archive).await?;
     require(
         expected
             .trim_start_matches('\u{feff}')
             .split_whitespace()
             .next()
-            == Some(digest(&archive).await?.as_str()),
+            == Some(archive_digest.as_str()),
         "Archive SHA256 mismatch",
     )?;
     let listing = tool("tar", &[OsStr::new("-tvzf"), archive.as_os_str()], 5).await?;
@@ -277,8 +278,8 @@ pub async fn main() -> Result<()> {
             .arg("--output")
             .arg(output.join(format!("{suite}.json")))
             .stdin(Stdio::null())
-            .stdout(capture.try_clone()?)
-            .stderr(capture)
+            .stdout(Stdio::piped())
+            .stderr(capture.try_clone()?)
             .kill_on_drop(true)
             .process_group(0);
         for key in ["TEMP", "TMP", "TMPDIR"] {
@@ -287,6 +288,18 @@ pub async fn main() -> Result<()> {
         let started = Instant::now();
         let mut child = command.spawn()?;
         let pid = child.id().ok_or("Missing suite pid")?;
+        let stdout = child.stdout.take().ok_or("Missing suite output")?;
+        let progress = tokio::spawn(async move {
+            use std::io::Write;
+            use tokio::io::{AsyncBufReadExt, BufReader};
+            let mut lines = BufReader::new(stdout).lines();
+            let mut capture = capture;
+            while let Some(line) = lines.next_line().await? {
+                writeln!(capture, "{line}")?;
+                println!("suite={suite} {line}");
+            }
+            Ok::<_, std::io::Error>(())
+        });
         let status = match timeout(Duration::from_secs(180), child.wait()).await {
             Ok(status) => status?,
             Err(_) => {
@@ -298,6 +311,8 @@ pub async fn main() -> Result<()> {
                 )
                 .await?;
                 timeout(Duration::from_secs(5), child.wait()).await??;
+                progress.abort();
+                let _ = progress.await;
                 log.event(
                     "ERROR",
                     &format!(
@@ -307,23 +322,26 @@ pub async fn main() -> Result<()> {
                 return Err("Native suite deadline exceeded".into());
             }
         };
+        if !status.success() {
+            let group=format!("-{pid}");
+            let _=tool("kill",&[OsStr::new("-KILL"),OsStr::new("--"),OsStr::new(&group)],3).await;
+        }
+        let mut progress = progress;
+        match timeout(Duration::from_secs(1), &mut progress).await {
+            Ok(result) => result??,
+            Err(_) => {
+                progress.abort();
+                let _ = progress.await;
+                return Err("Suite progress reader did not drain".into());
+            }
+        }
         results.push(json!({"suite":suite,"exit":status.code(),"seconds":started.elapsed().as_secs_f64(),"reaped":true}));
         receipt(
             &output.join("summary.json"),
             &json!({"binary_sha256":binary_digest,"suites":results}),
         )?;
         println!("{suite}: exit={}", status.code().unwrap_or(-1));
-        if !status.success() {
-            let group = format!("-{pid}");
-            // A failed/panicked worker cannot leave inherited native children alive.
-            let _ = tool(
-                "kill",
-                &[OsStr::new("-KILL"), OsStr::new("--"), OsStr::new(&group)],
-                3,
-            )
-            .await;
-            return Err("Native suite failed".into());
-        }
+        require(status.success(), "Native suite failed")?;
     }
     require(
         generation(&binary)? == original,

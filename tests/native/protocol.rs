@@ -93,6 +93,7 @@ pub async fn run(binary: &Path, output: &Path, family: &str, mode: &str) -> Resu
     let mut results = Vec::new();
     for mode in modes {
         for case in cases {
+            println!("family={family} mode={mode} case={case} started");
             let root = fixture::temporary(output, "protocol-case-")?;
             let server = Fixture::start(
                 certs.path(),
