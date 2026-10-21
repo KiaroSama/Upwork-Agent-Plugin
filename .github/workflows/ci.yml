@@ -82,7 +82,7 @@ jobs:
           }
       - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
-          tool: cargo-nextest@0.9.149
+          tool: cargo-nextest@0.9.148
           fallback: none
       - name: Validate source inventory and UTF-8
         run: ./scripts/check.ps1
