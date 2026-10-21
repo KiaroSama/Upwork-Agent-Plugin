@@ -30,6 +30,7 @@ namespace UpworkVerification {
         [DllImport("kernel32.dll", SetLastError=true)] static extern IntPtr CreateJobObject(IntPtr attributes, string name);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool SetInformationJobObject(IntPtr job, int kind, ref ExtendedLimits value, uint size);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job, int kind, out Accounting value, uint size, IntPtr returned);
+        [DllImport("kernel32.dll", SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr job, int kind, IntPtr value, uint size, IntPtr returned);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
         [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateJobObject(IntPtr job, uint code);
         [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
@@ -51,6 +52,26 @@ namespace UpworkVerification {
                 Check(QueryInformationJobObject(handle, 1, out value, (uint)Marshal.SizeOf<Accounting>(), IntPtr.Zero));
                 return value.Active;
             }
+        }
+        public uint[] Members() {
+            for (int capacity = 32; capacity <= 4096; capacity *= 2) {
+                int size = checked(8 + capacity * IntPtr.Size);
+                IntPtr buffer = Marshal.AllocHGlobal(size);
+                try {
+                    if (!QueryInformationJobObject(handle, 3, buffer, (uint)size, IntPtr.Zero)) {
+                        int error = Marshal.GetLastWin32Error();
+                        if (error == 234) continue;
+                        throw new Win32Exception(error);
+                    }
+                    int assigned = Marshal.ReadInt32(buffer, 0), count = Marshal.ReadInt32(buffer, 4);
+                    if (count < 0 || count > capacity || count > assigned) throw new InvalidOperationException("Invalid Job membership.");
+                    if (count < assigned) continue;
+                    var result = new uint[count];
+                    for (int i = 0; i < count; i++) result[i] = checked((uint)Marshal.ReadIntPtr(buffer, 8 + i * IntPtr.Size).ToInt64());
+                    return result;
+                } finally { Marshal.FreeHGlobal(buffer); }
+            }
+            throw new InvalidOperationException("Job membership exceeded the bounded query.");
         }
         public void Terminate() { Check(TerminateJobObject(handle, 1)); }
         public void Dispose() { if (handle != IntPtr.Zero) { CloseHandle(handle); handle = IntPtr.Zero; } }
@@ -128,7 +149,21 @@ function Wait-VerificationEmpty($Owner) {
     # Observe natural completion briefly; a still-running descendant is a failure.
     $watch = [Diagnostics.Stopwatch]::StartNew()
     while (Test-VerificationMembers $Owner) {
-        if ($watch.Elapsed.TotalSeconds -ge 1) { return $false }
+        if ($watch.Elapsed.TotalSeconds -ge 1) {
+            if ($IsWindows) {
+                try {
+                    foreach ($memberId in $Owner.Job.Members()) {
+                        $member = $null
+                        try {
+                            $member = [Diagnostics.Process]::GetProcessById($memberId)
+                            Write-Host "Owned verification member pid=$memberId name=$($member.ProcessName)."
+                        } catch { Write-Host "Owned verification member pid=$memberId identity unavailable." }
+                        finally { if ($null -ne $member) { $member.Dispose() } }
+                    }
+                } catch { Write-Host 'Owned verification membership diagnostics unavailable; cleanup remains required.' }
+            }
+            return $false
+        }
         Start-Sleep -Milliseconds 20
     }
     return $true
