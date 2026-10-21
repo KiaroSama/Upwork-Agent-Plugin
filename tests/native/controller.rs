@@ -323,8 +323,13 @@ pub async fn main() -> Result<()> {
             }
         };
         if !status.success() {
-            let group=format!("-{pid}");
-            let _=tool("kill",&[OsStr::new("-KILL"),OsStr::new("--"),OsStr::new(&group)],3).await;
+            let group = format!("-{pid}");
+            let _ = tool(
+                "kill",
+                &[OsStr::new("-KILL"), OsStr::new("--"), OsStr::new(&group)],
+                3,
+            )
+            .await;
         }
         let mut progress = progress;
         match timeout(Duration::from_secs(1), &mut progress).await {
