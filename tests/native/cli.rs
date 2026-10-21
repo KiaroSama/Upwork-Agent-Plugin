@@ -17,6 +17,12 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
             invoke(binary, $root, $args, $data, 4.0).await?
         }};
     }
+    macro_rules! rejected {
+        ($result:expr) => {{
+            let result = $result;
+            super::oracle::controlled_rejection(result.0, result.3)
+        }};
+    }
     let invalid: Vec<Vec<&str>> = vec![
         vec!["direct", "--help"],
         vec!["direct", "extra"],
@@ -47,7 +53,7 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
         let root = work.join(format!("invalid-{index}"));
         fs::create_dir(&root)?;
         let result = call!(&root, args, b"");
-        check!(format!("invalid-{index}-fails"), result.0 != 0 && !result.3);
+        check!(format!("invalid-{index}-fails"), rejected!(result));
         check!(
             format!("invalid-{index}-no-files"),
             fs::read_dir(root)?.next().is_none()
@@ -60,7 +66,7 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
         serde_json::from_slice::<Value>(&call!(&root, &["status"], b"").1)?["mode"] == "blocked"
     );
     let b = call!(&root, &["bridge"], b"");
-    check!("blocked-clean-stdout", b.0 != 0 && b.1.is_empty() && !b.3);
+    check!("blocked-clean-stdout", rejected!(&b) && b.1.is_empty());
     check!("explicit-direct", call!(&root, &["direct"], b"").0 == 0);
     let b = call!(&root, &["bridge"], b"");
     check!(
@@ -140,24 +146,24 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
     )?;
     check!(
         "atomic-bad-import",
-        call!(&root, &["import", source], b"").0 != 0 && fs::read(&path)? == before
+        rejected!(call!(&root, &["import", source], b"")) && fs::read(&path)? == before
     );
     fs::write(&text, [b"#".as_slice(), &vec![b'x'; 1024 * 1024]].concat())?;
     check!(
         "oversized-import",
-        call!(&root, &["import", source], b"").0 != 0 && fs::read(&path)? == before
+        rejected!(call!(&root, &["import", source], b"")) && fs::read(&path)? == before
     );
     check!(
         "directory-import",
-        call!(&root, &["import", work.to_str().unwrap()], b"").0 != 0
+        rejected!(call!(&root, &["import", work.to_str().unwrap()], b""))
     );
     let fifo = work.join("fifo");
     super::child::tool("mkfifo", &[fifo.as_os_str()], 2).await?;
     let result = call!(&root, &["import", fifo.to_str().unwrap()], b"");
-    check!("fifo-no-writer-refused", result.0 != 0 && !result.3);
+    check!("fifo-no-writer-refused", rejected!(result));
     check!(
         "failed-select-preserves",
-        call!(&root, &["select", "missing"], b"").0 != 0 && fs::read(&path)? == before
+        rejected!(call!(&root, &["select", "missing"], b"")) && fs::read(&path)? == before
     );
     for (index, value) in [
         json!([]),
@@ -176,10 +182,7 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
         fs::write(&path, serde_json::to_vec(value)?)?;
         let original = fs::read(&path)?;
         let result = call!(&r, &["register"], b"");
-        check!(
-            format!("json-{index}-controlled"),
-            result.0 != 0 && result.0 != 101 && !result.3
-        );
+        check!(format!("json-{index}-controlled"), rejected!(result));
         check!(
             format!("json-{index}-preserved"),
             fs::read(&path)? == original
@@ -199,7 +202,7 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
     let original = fs::read(&path)?;
     check!(
         "foreign-registration-refused",
-        call!(&r, &["register"], b"").0 != 0 && fs::read(&path)? == original
+        rejected!(call!(&r, &["register"], b"")) && fs::read(&path)? == original
     );
     let r = work.join("owned");
     fs::create_dir(&r)?;
@@ -227,7 +230,7 @@ pub async fn run(binary: &Path, output: &Path) -> Result<Value> {
     std::os::unix::fs::symlink(&outside, r.join(".claude"))?;
     check!(
         "linked-registration-refused",
-        call!(&r, &["register"], b"").0 != 0
+        rejected!(call!(&r, &["register"], b""))
             && fs::read_dir(&outside)?.next().is_none()
             && !r.join(".mcp.json").exists()
     );

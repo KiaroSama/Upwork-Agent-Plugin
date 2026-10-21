@@ -140,3 +140,13 @@ No argv, environment, tokens or upstream error text is serialized. There is no a
 purge; review development evidence explicitly. The manual workflow uploads the full receipt collection
 and safe lifecycle logs. Nextest limits apply only to its CI profile;
 serial libtest has the outer wrapper bounds, not per-case Nextest isolation.
+
+Before Cargo starts, the verification driver establishes a Windows kill-on-close Job Object or a
+verified Unix process group. Cleanup does not depend on Cargo's root PID remaining alive. A nominal
+successful command with surviving owned descendants fails verification; wall/idle expiry terminates
+the owned group/job. Receipts distinguish cleanup from detected survivors and timeout. On Unix the
+receipt means no running group members and the direct child waited; orphan zombies belong to init,
+and arbitrary descendants deliberately escaping their group are not certified. This is build-tool
+lifetime ownership, not a hostile-code sandbox. Native CLI rejection checks require controlled exit1
+without an owner timeout or invalid output capture; crash/signal/timeout controls cannot pass as
+expected product rejection. Existing state-preservation assertions remain mandatory.

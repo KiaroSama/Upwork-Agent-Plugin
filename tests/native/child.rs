@@ -224,6 +224,7 @@ pub async fn invoke(
             .await??;
         }
         let (exit, timed) = child.finish(seconds, true).await?;
+        require(!child.reader_invalid, "Invalid CLI output capture")?;
         Ok((exit, child.records.concat(), child.errors.clone(), timed))
     }
     .await;

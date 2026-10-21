@@ -62,6 +62,10 @@ impl Observation {
     }
 }
 
+pub fn controlled_rejection(exit: i32, timed_out: bool) -> bool {
+    exit == 1 && !timed_out
+}
+
 pub fn rejected(result: &Value) -> bool {
     result["returncode"] == 1
         && result["controller_timeout"] == false
@@ -131,6 +135,10 @@ pub fn controls() -> Value {
         let mut changed = base.clone();
         changed[key] = value;
         assert!(!rejected(&changed));
+    }
+    assert!(controlled_rejection(1, false));
+    for (exit, timed) in [(0, false), (101, false), (-9, false), (-9, true), (1, true)] {
+        assert!(!controlled_rejection(exit, timed));
     }
     let success = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}";
     for (lines, first, invalid) in [

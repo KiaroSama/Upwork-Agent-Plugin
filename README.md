@@ -525,7 +525,9 @@ output in `logs/upwork-build_<UTC>_<pid>.log`; inspect that file for progress/er
 `UPWORK_BUILD_WALL_SECONDS`/`UPWORK_BUILD_IDLE_SECONDS` may shorten, never increase, shell limits.
 Clean Git inputs and matching executable receipts are required for verified release packaging.
 Ordinary verification retains 900/180 seconds. Optimization, stripping and failure exit handling remain
-enabled; silence alone is not proof of compiler progress.
+enabled; silence alone is not proof of compiler progress. PowerShell verification requires installed
+Bash on Unix and verifies its isolated process group before Cargo starts; Windows uses a kill-on-close
+Job Object. Surviving owned descendants fail verification even after Cargo exits successfully.
 Build/verification scripts keep generated paths inside the project. Preserve `bin/`, profiles, session,
 input files and operational logs when clearing optional development artifacts; shared tools remain untouched.
 

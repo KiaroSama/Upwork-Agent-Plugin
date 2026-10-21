@@ -13,17 +13,14 @@ $env:CARGO_TARGET_DIR = Join-Path $root 'target'
 $env:XDG_CACHE_HOME = Join-Path $root '.ci-cache'
 New-Item -ItemType Directory -Force -Path $env:CARGO_HOME, $env:XDG_CACHE_HOME | Out-Null
 $env:CARGO_BUILD_JOBS = '2'
-$info = [Diagnostics.ProcessStartInfo]::new()
-$info.FileName = 'cargo'
-$info.WorkingDirectory = $root
-$info.UseShellExecute = $false
-$info.CreateNoWindow = $true
-$info.RedirectStandardOutput = $true
-$info.RedirectStandardError = $true
-$info.RedirectStandardInput = $true
-foreach ($arg in $CargoArgs) { $info.ArgumentList.Add($arg) }
-$process = [Diagnostics.Process]::new()
-$process.StartInfo = $info
+. (Join-Path $PSScriptRoot 'verification-process.ps1')
+$ownerDirectory = Join-Path $work ('owner-' + [Guid]::NewGuid().ToString('N'))
+[IO.Directory]::CreateDirectory($ownerDirectory) | Out-Null
+$owner = $null
+$process = $null
+$treeReaped = $false
+$survivors = $false
+$stdout = $stderr = $null
 $start = [DateTime]::UtcNow
 $last = $start
 $expired = $false
@@ -49,9 +46,11 @@ try {
         if (Test-Path -LiteralPath $receiptPath) { Remove-Item -LiteralPath $receiptPath -Force }
         $buildInput = & (Join-Path $PSScriptRoot 'build-receipt.ps1') -Capture
     }
-    if (-not $process.Start()) { throw 'Cannot start Cargo.' }
+    $null = Get-Command cargo -CommandType Application -ErrorAction Stop
+    $owner = New-VerificationOwner $ownerDirectory $CargoArgs
+    $process = $owner.Process
+    Start-VerificationOwner $owner
     $started = $true
-    $process.StandardInput.Close()
     $stdout = $process.StandardOutput.ReadLineAsync()
     $stderr = $process.StandardError.ReadLineAsync()
     while (-not $process.HasExited -or $null -ne $stdout -or $null -ne $stderr) {
@@ -70,8 +69,12 @@ try {
         }
         if (([DateTime]::UtcNow - $start).TotalSeconds -gt $WallSeconds -or ([DateTime]::UtcNow - $last).TotalSeconds -gt $IdleSeconds) {
             $expired = $true
-            if (-not $process.HasExited) { $process.Kill($true) }
+            Stop-VerificationOwner $owner
             break
+        }
+        if ($process.HasExited -and (Test-VerificationMembers $owner)) {
+            $survivors = $true
+            Stop-VerificationOwner $owner
         }
         # Also yield while inherited output handles drain after the parent exits.
         if (-not $process.HasExited) { $null = $process.WaitForExit(100) }
@@ -81,7 +84,12 @@ try {
         }
     }
     if (-not $process.WaitForExit(5000)) { throw 'Cargo could not be reaped within the shutdown bound.' }
-    $code = if ($expired) { 1 } else { $process.ExitCode }
+    if (Test-VerificationMembers $owner) {
+        $survivors = $true
+        Stop-VerificationOwner $owner
+    }
+    $code = if ($expired -or $survivors) { 1 } else { $process.ExitCode }
+    if ($survivors) { Event ERROR 'Cargo left owned descendants; verification refused and descendants terminated.' }
     if ($code -eq 0 -and $releaseBuild) {
         $binary = if ($IsWindows) { 'upwork-connector.exe' } else { 'upwork-connector' }
         try { & (Join-Path $PSScriptRoot 'build-receipt.ps1') -Binary (Join-Path $root "target/release/$binary") -Expected $buildInput }
@@ -95,11 +103,15 @@ try {
     throw
 } finally {
     try {
-        if ($started -and -not $process.HasExited) { $process.Kill($true); if (-not $process.WaitForExit(5000)) { throw 'Cargo could not be reaped.' } }
+        if ($null -ne $owner) {
+            $started = $owner.Started
+            Stop-VerificationOwner $owner
+        }
+        $treeReaped = $true
         $end = [DateTime]::UtcNow
         $identity = [Text.Encoding]::UTF8.GetBytes(($CargoArgs | ConvertTo-Json -Compress))
         $digest = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($identity)).ToLowerInvariant()
-        $receipt = @{ run_id = $receiptId; stage = $stage; command_sha256 = $digest; pid = $(if ($started) { $process.Id } else { $null }); start = $start.ToString('o'); end = $end.ToString('o'); elapsed = ($end - $start).TotalSeconds; wall_seconds = $WallSeconds; idle_seconds = $IdleSeconds; started = $started; expired = $expired; outcome = $outcome; exitCode = $code; reaped = (-not $started -or $process.HasExited) }
+        $receipt = @{ run_id = $receiptId; stage = $stage; command_sha256 = $digest; pid = $(if ($started) { $process.Id } else { $null }); start = $start.ToString('o'); end = $end.ToString('o'); elapsed = ($end - $start).TotalSeconds; wall_seconds = $WallSeconds; idle_seconds = $IdleSeconds; started = $started; expired = $expired; outcome = $outcome; exitCode = $code; reaped = $treeReaped; descendants_detected = $survivors; ownership = $(if ($IsWindows) { 'windows-job' } else { 'unix-process-group' }) }
         $receipt | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $receiptDirectory "$stage-$receiptId.json") -Encoding utf8NoBOM
         if ($releaseBuild -and $code -ne 0 -and (Test-Path -LiteralPath (Join-Path $work 'build-provenance.json'))) {
             Remove-Item -LiteralPath (Join-Path $work 'build-provenance.json') -Force
@@ -108,6 +120,10 @@ try {
     } catch {
         [Console]::Error.WriteLine('Verification receipt or process cleanup failed; no complete verification is claimed.')
         if ($code -eq 0) { $code = 1 }
-    } finally { $process.Dispose() }
+    } finally {
+        if ($null -ne $owner -and $null -ne $owner.Job) { $owner.Job.Dispose() }
+        if ($null -ne $process) { $process.Dispose() }
+        Remove-Item -LiteralPath $ownerDirectory -Recurse -Force
+    }
 }
 exit $code
