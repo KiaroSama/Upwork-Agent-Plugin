@@ -123,6 +123,17 @@ function Test-VerificationMembers($Owner) {
     return @($rows | Where-Object { $_ -match '^\s*\d+\s+(\d+)\s+(\S+)' -and [int]$Matches[1] -eq $Owner.Group -and -not $Matches[2].StartsWith('Z') }).Count -gt 0
 }
 
+function Wait-VerificationEmpty($Owner) {
+    # The root exit signal can precede Job accounting or a child's final teardown.
+    # Observe natural completion briefly; a still-running descendant is a failure.
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    while (Test-VerificationMembers $Owner) {
+        if ($watch.Elapsed.TotalSeconds -ge 1) { return $false }
+        Start-Sleep -Milliseconds 20
+    }
+    return $true
+}
+
 function Stop-VerificationOwner($Owner) {
     if ($Owner.Started) {
         if ($IsWindows) { $Owner.Job.Terminate() }

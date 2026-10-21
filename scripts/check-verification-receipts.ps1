@@ -239,3 +239,5 @@ exit $LASTEXITCODE
     $env:PATH = $originalPath
     Remove-Item -LiteralPath $sandbox -Recurse -Force
 }
+# Negative-control native commands must not leak their status into a successful check.
+exit 0

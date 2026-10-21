@@ -72,7 +72,7 @@ try {
             Stop-VerificationOwner $owner
             break
         }
-        if ($process.HasExited -and (Test-VerificationMembers $owner)) {
+        if ($process.HasExited -and -not (Wait-VerificationEmpty $owner)) {
             $survivors = $true
             Stop-VerificationOwner $owner
         }
@@ -84,7 +84,7 @@ try {
         }
     }
     if (-not $process.WaitForExit(5000)) { throw 'Cargo could not be reaped within the shutdown bound.' }
-    if (Test-VerificationMembers $owner) {
+    if (-not (Wait-VerificationEmpty $owner)) {
         $survivors = $true
         Stop-VerificationOwner $owner
     }
