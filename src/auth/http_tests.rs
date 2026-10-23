@@ -105,7 +105,7 @@ async fn oauth_request_failure_is_safe_and_has_no_invented_status() {
         .unwrap()
         .with_log(Log::new(dir.path(), "oauth-fixture"));
     let request = http::Request::builder()
-        .uri("file:///sentinel-query")
+        .uri("file://fixture.invalid/sentinel-query")
         .body(Vec::new())
         .unwrap();
     let error = tokio::time::timeout(
