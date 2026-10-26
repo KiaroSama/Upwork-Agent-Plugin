@@ -80,7 +80,7 @@ jobs:
             Write-ToolEvent ERROR 'Pinned macOS stripping preflight failed; packaging is blocked.'
             throw
           }
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: cargo-nextest@0.9.148
           fallback: none
@@ -199,7 +199,7 @@ jobs:
       - name: Confine audit installer, temp and caches to this checkout
         run: ./scripts/ci-environment.ps1
         shell: pwsh
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
         with:
           tool: cargo-audit@0.22.2
           fallback: none
